@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP INA199A2
+D IC OPAMP CURR SENSE 14KHZ SC70-6
+K current sense high-side low-side opamp
+F http://www.ti.com/lit/ds/symlink/ina199.pdf
+$ENDCMP
+#
+#End Doc Library

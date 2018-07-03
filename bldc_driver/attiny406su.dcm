@@ -1,0 +1,15 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP ATTINY406-SU
+D QFN20, 8k Flash, 512B SRAM, 128B EEPROM
+K AVR 8bit Microcontroller tinyAVR
+F http://ww1.microchip.com/downloads/en/DeviceDoc/Microchip%208bit%20mcu%20AVR%20ATtiny406%20data%20sheet%2040001976A.pdf
+$ENDCMP
+#
+$CMP ATTINY816-SU
+D S020 Wide, 8k Flash, 512B SRAM, 128B EEPROM
+K AVR 8bit Microcontroller tinyAVR
+F http://ww1.microchip.com/downloads/en/DeviceDoc/40001913A.pdf
+$ENDCMP
+#
+#End Doc Library

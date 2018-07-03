@@ -1,0 +1,8 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP SAM-SWD-10
+D Standard IDC10 Male Connector, ATMEL ICE SAM SWD
+K IDC10 Male Connector
+$ENDCMP
+#
+#End Doc Library
