@@ -10,28 +10,36 @@
 #include <fastmath.h>
 
 #include "sam.h"
-#include "pid_ctrl.h"
 
 #define CLOCK_FREQ 48000000
-#define PWM_FREQ 24000 //5600
+#define PWM_FREQ 20000 //5600
 #define PWM_PERIOD (CLOCK_FREQ/PWM_FREQ)
 #define PWM_REST (80)
 #define MAX_DUTY_CYCLE (PWM_PERIOD - PWM_REST)
-#define MIN_DUTY_CYCLE (PWM_PERIOD / 15)
-#define MAX_DUTY_CHANGE 20
+#define MIN_DUTY_CYCLE (PWM_PERIOD / 18)
+// index-0 will be for 1hz
+#define SYNC_DUTY_N 7
+#define SYNC_DUTY_BY_3EHZ ((uint16_t[]){ PWM_PERIOD / 16, PWM_PERIOD / 15, PWM_PERIOD / 14, PWM_PERIOD / 13, PWM_PERIOD / 12, PWM_PERIOD / 11, PWM_PERIOD / 10})
+#define MAX_DUTY_CHANGE 50
+#define OVER_CURRENT_CHANGE 5
 
 // synchronous speed for start up
-#define SYNCHRONOUS_HZ 3
-#define SYNCHRONOUS_STEP_SEC 0.2 // seconds to stay in synchronous mode for startup
+#define SYNCHRONOUS_EHZ_START 2
+#define SYNCHRONOUS_EHZ_END 22
+#define SYNCHRONOUS_FIRST_STEP_SEC 0.1
+#define SYNCHRONOUS_FIRST_STEP_TICKS (PWM_FREQ * SYNCHRONOUS_FIRST_STEP_SEC)
+#define SYNCHRONOUS_STEP_SEC 0.03
 #define SYNCHRONOUS_STEP_TICKS (PWM_FREQ * SYNCHRONOUS_STEP_SEC)
+
+// Alignment of motor phases for start up
+#define ALIGN_STEP_SEC 0.2 // seconds to assert an alignment step
+#define ALIGN_STEP_TICKS (PWM_FREQ * ALIGN_STEP_SEC)
 
 // rate at which speed measurement is updated
 #define HZ_MEASUREMENT_HZ 10
 
-#define HZ_ADJUST_HZ 10
-#define HZ_ADJUST_TICKS (PWM_FREQ / HZ_ADJUST_HZ)
-#define CURRENT_ADJUST_HZ 40
-#define CURRENT_ADJUST_TICKS (PWM_FREQ / CURRENT_ADJUST_HZ)
+#define DUTY_ADJUST_HZ 40
+#define DUTY_ADJUST_TICKS (PWM_FREQ / DUTY_ADJUST_HZ)
 #define MIN_MOTOR_CURRENT 10
 
 #define MOTOR0_STATUS PIN_PA09
@@ -104,11 +112,11 @@ void motor_clear(int idx) {
 
 // Communication
 #define MOTOR1_MASK (1 << 6) // indicates to target motor1/second motor instead of motor0.
-#define SET_TARGET_HZ_MSG 1
-#define READ_TARGET_HZ_MSG 2
+#define SET_DUTY_MSG 1
+#define READ_DUTY_MSG 2
 #define READ_MEASURED_HZ_MSG 3
-#define SET_TARGET_CURRENT_MSG 4
-#define READ_TARGET_CURRENT_MSG 5
+#define SET_CURRENT_LIMIT_MSG 4
+#define READ_CURRENT_LIMIT_MSG 5
 #define READ_MEASURED_CURRENT_MSG 6
 #define READ_TEMPERATURE_MSG 7
 #define READ_ERROR_MSG 8
@@ -138,7 +146,7 @@ volatile uint32_t motor_current_raw[2]; // 16-bit fixed point
 volatile uint32_t motor_current_combined_raw[2]; // 16-bit fixed point
 uint16_t motor_current[2]; // same units as are communicated over i2c
 volatile uint16_t temp;
-volatile uint32_t motor_hz[2];
+volatile uint32_t motor_ehz[2];
 volatile uint32_t motor_count[2]; // state change count
 
 #define COIL_BUFFER_N 1024
@@ -160,9 +168,9 @@ uint32_t motor_disable_clear_bits = 0;
 // update 
 uint32_t motor_pwm_bits_next = 0;
 
-volatile uint16_t target_hz[2] = { 0, 0 };
-volatile uint16_t target_current[2] = { 0, 0 };
+volatile uint16_t current_limit[2] = { 2048, 2048 };
 
+uint16_t user_duty_cycle[2] = { 0, 0 }; // this is the one directly set by commands
 uint16_t target_duty_cycle[2] = { 0, 0 };
 //uint16_t duty_cycle_on_time = 0;
 //uint32_t duty_cycle_measured[2] = { 0 };
@@ -171,20 +179,20 @@ int32_t sense_coil_max[2] = { 0 };
 bool coil_high[2] = { false };
 uint16_t adc_measurement_time[2] = { 0 };
 
-uint16_t motor_min_hz[2] = { 0 }; // minimum hz for transitions in case we miss commutation, also for synchronous start up
+uint16_t motor_min_ehz[2] = { 0 }; // minimum hz for transitions in case we miss commutation, also for synchronous start up
 uint32_t last_transition_ticks[2] = { 0 }; // for timing transitions
 uint32_t last_hz_adjust_ticks[2] = { 0 }; // for hz pid
-uint32_t last_current_adjust_ticks[2] = { 0 }; // for current pid
+uint32_t last_duty_adjust_ticks[2] = { 0 }; // for current pid
 uint32_t last_hz_ticks[2] = { 0 }; // for hz measurement
 uint32_t sync_start_ticks[2] = { 0 }; // synchronous starting
 bool sync_done[2] = { false, false };
+uint32_t align_start_ticks[2] = { 0 };
+bool align_started[2] = { false, false };
+bool align_done[2] = { false, false };
 uint32_t last_zero_ticks[2] = { 0 };
 uint32_t state_change_interval[2] = { 0 }; // average ticks between state changes, 16-bit fixed point to allow filtering/smoothing
 bool change_after_delay[2] = { false };
 uint32_t average_coil[2] = { 0 }; // average value of floating coil, for determining threshold to use, 16-bit fixed point
-
-pid_ctrl_t current_pid[2];
-pid_ctrl_t hz_pid[2];
 
 // incremented at whatever our pwm frequency
 volatile uint32_t ticks_pwm_cycles = 0;
@@ -249,7 +257,7 @@ void ADC_Handler() {
     static volatile uint16_t adc_rate;
 
     bool got_coil_value = false;
-    uint16_t adc_val;
+    volatile uint16_t adc_val;
     uint16_t last_adc_channel = adc_started_channel;
 
     switch (adc_started_channel) {
@@ -271,7 +279,7 @@ void ADC_Handler() {
         case MOTOR1_C_ADC:
             start_aux_adc_read();
             adc_val = read_analog();
-            if (ticks_pwm_cycles - last_transition_ticks[1] >= state_change_interval[1] >> 18) {
+            if (ticks_pwm_cycles - last_transition_ticks[1] >= state_change_interval[1] >> 19) {
                 motor_coil[1] = adc_val;
                 //coil_buffer[coil_buffer_i] = motor_coil[1];
                 //coil_buffer_i = (coil_buffer_i + 1) % COIL_BUFFER_N;
@@ -281,7 +289,7 @@ void ADC_Handler() {
             break;
         case MOTOR0_CURRENT_ADC:
             adc_val = read_analog();
-            motor_current_raw[0] = ((uint64_t)motor_current_raw[0] * 2047 + (adc_val << 16) + 1024) >> 11;
+            motor_current_raw[0] = ((uint64_t)motor_current_raw[0] * 511 + (adc_val << 16) + 256) >> 9;
             //coil_buffer[coil_buffer_i] = adc_val;
             //coil_buffer_i = (coil_buffer_i + 1) % COIL_BUFFER_N;
             break;
@@ -399,28 +407,29 @@ static void i2c_periph_read_complete(struct i2c_slave_module *const module) {
 
     i2c_out_bytes = 3; // setSendReply responds with three bytes
     switch (buf[0]) {
-        case SET_TARGET_HZ_MSG:
+        case SET_DUTY_MSG:
             if (gotValue) {
-                target_hz[motor] = value;
-                pid_set_setpoint(&hz_pid[motor], target_hz[motor]);
+                if (value > MAX_DUTY_CYCLE) {
+                    value = MAX_DUTY_CYCLE;
+                }
+                user_duty_cycle[motor] = value;
             }
             i2c_out_bytes = 0;
             break;
-        case READ_TARGET_HZ_MSG:
-            set_send_reply(i2c_out_buf, target_hz[motor]);
+        case READ_DUTY_MSG:
+            set_send_reply(i2c_out_buf, user_duty_cycle[motor]);
             break;
         case READ_MEASURED_HZ_MSG:
-            set_send_reply(i2c_out_buf, motor_hz[motor]);
+            set_send_reply(i2c_out_buf, motor_ehz[motor]);
             break;
-        case SET_TARGET_CURRENT_MSG:
+        case SET_CURRENT_LIMIT_MSG:
             if (gotValue) {
-                target_current[motor] = value;
-                pid_set_setpoint(&current_pid[motor], target_current[motor]);
+                current_limit[motor] = value;
             }
             i2c_out_bytes = 0;
             break;
-        case READ_TARGET_CURRENT_MSG:
-            set_send_reply(i2c_out_buf, target_current[motor]);
+        case READ_CURRENT_LIMIT_MSG:
+            set_send_reply(i2c_out_buf, current_limit[motor]);
             break;
         case READ_MEASURED_CURRENT_MSG:
             set_send_reply(i2c_out_buf, motor_current[motor]);
@@ -595,7 +604,7 @@ void update_motor_state(int motor) {
     motor_disable_clear_bits &= ~enable_mask;
 
     // Sanity/safety check! or the motor could get stuck on 100%!
-    if (target_duty_cycle[motor] == 0 || (target_current[motor] == 0 && motor_current[motor] < MIN_MOTOR_CURRENT)) {
+    if (target_duty_cycle[motor] == 0 || (user_duty_cycle[motor] == 0 && motor_current[motor] < MIN_MOTOR_CURRENT)) {
         PORT->Group[0].OUTCLR.reg = motor_mask; // clear them completely
         return;
     }
@@ -655,30 +664,17 @@ void update_motor_state(int motor) {
             }
             break;
     }
-
-    if (motor == 1) {
-        motor_disable(0 + offset);
-        motor_disable(1 + offset);
-        motor_disable(2 + offset);
-        motor_pwm_bits_next &= ~MOTOR_I_TO_MASK[1 + offset];
-        motor_disable_clear_bits |= MOTOR_I_TO_MASK[1 + offset];
-        motor_enable_bits &= ~ENABLE_I_TO_MASK[1 + offset];
-        motor_disable_clear_bits |= ENABLE_I_TO_MASK[1 + offset];
-        //return;
-    }
     new_motor_bits = true;
 }
 
 void update_motor(int motor) {
     int offset = (motor == 1) ? 3 : 0;
 
-    //uint32_t combined_raw = (motor_current_raw[motor] >> 16) * (duty_cycle_measured[motor] / PWM_PERIOD);
-    uint32_t combined_raw = (motor_current_raw[motor] / PWM_PERIOD) * target_duty_cycle[motor] * 15; // w/ a correction factor to make it more... accurate?
-    motor_current_combined_raw[motor] = (motor_current_combined_raw[motor] * 127 + combined_raw) >> 7;
-    uint32_t curr = motor_current_combined_raw[motor] >> 16;
-    motor_current[motor] = curr;
+    //uint32_t combined_raw = (motor_current_raw[motor] / PWM_PERIOD) * target_duty_cycle[motor] << 4; // w/ a correction factor to make it more... accurate?
+    //motor_current_combined_raw[motor] = (motor_current_combined_raw[motor] * 127 + combined_raw) >> 7;
+    //uint16_t curr = ; //motor_current_combined_raw[motor] >> 16;
 
-    if (target_hz[motor] == 0 && target_current[motor] == 0 && (target_duty_cycle[motor] <= MIN_DUTY_CYCLE || curr < MIN_MOTOR_CURRENT)) {
+    if ((user_duty_cycle[motor] == 0 || current_limit[motor] == 0) && (!sync_done[motor] || target_duty_cycle[motor] <= MIN_DUTY_CYCLE || motor_current[motor] < MIN_MOTOR_CURRENT)) {
         motor_disable(0 + offset);
         motor_disable(1 + offset);
         motor_disable(2 + offset);
@@ -690,51 +686,56 @@ void update_motor(int motor) {
             tcc_set_compare_value(&tcc_mod, motor, 0);
         }
 
-        motor_hz[motor] = 0;
+        motor_ehz[motor] = 0;
         //duty_cycle_measured[motor] = 0;
         update_motor_state(motor); // turn off pwm too
 
         motor_clear(0 + offset);
         motor_clear(1 + offset);
         motor_clear(2 + offset);
+
+        align_started[motor] = false;
+        align_done[motor] = false;
+        sync_done[motor] = false;
+        motor_min_ehz[motor] = 0;
+
         return;
     }
 
     PORT->Group[0].OUTSET.reg = 1 << ((motor == 1) ? MOTOR1_STATUS : MOTOR0_STATUS);
 
-    // target current is our current limit and target
-    // target hz gives us a minimum speed, to help, e.g. with starting the motor up
-
     volatile uint32_t now_ticks = ticks_pwm_cycles;
-    
-    bool time_to_adjust = now_ticks - last_hz_adjust_ticks[motor] > HZ_ADJUST_TICKS;
-    if (target_hz[motor] > 0 && time_to_adjust) {
-        target_current[motor] = pid_next(&hz_pid[motor], motor_hz[motor]);
-        pid_set_setpoint(&current_pid[motor], target_current[motor]);
-        last_hz_adjust_ticks[motor] = now_ticks;
-    }
+    bool time_to_adjust = now_ticks - last_duty_adjust_ticks[motor] > DUTY_ADJUST_TICKS;
+    if ((current_limit[motor] > 0 || target_duty_cycle[motor] > MIN_DUTY_CYCLE) && time_to_adjust) {
+        if (sync_done[motor]) {
+            int16_t diff = (int16_t)user_duty_cycle[motor] - (int16_t)target_duty_cycle[motor];
+            if (diff > MAX_DUTY_CHANGE) {
+                diff = MAX_DUTY_CHANGE;
+            }
+            if (diff < -MAX_DUTY_CHANGE) {
+                diff = -MAX_DUTY_CHANGE;
+            }
+            target_duty_cycle[motor] += diff;
 
-    time_to_adjust = now_ticks - last_current_adjust_ticks[motor] > CURRENT_ADJUST_TICKS;
-    if ((target_current[motor] > 0 || target_duty_cycle[motor] > MIN_DUTY_CYCLE) && time_to_adjust) {
-        uint16_t new_target_duty = (uint16_t)pid_next(&current_pid[motor], curr);
-        int16_t diff = new_target_duty - (int16_t)target_duty_cycle[motor];
-        if (diff > MAX_DUTY_CHANGE) {
-            diff = MAX_DUTY_CHANGE;
+            if (target_duty_cycle[motor] < MIN_DUTY_CYCLE) {
+                target_duty_cycle[motor] = MIN_DUTY_CYCLE;
+            }
+            if (target_duty_cycle[motor] > MAX_DUTY_CYCLE) {
+                target_duty_cycle[motor] = MAX_DUTY_CYCLE;
+            }
         }
-        if (diff < -MAX_DUTY_CHANGE) {
-            diff = -MAX_DUTY_CHANGE;
-        }
-        target_duty_cycle[motor] += diff;
-
-        //target_duty_cycle[motor] = target_current[motor];
-        if (!sync_done[motor] && target_duty_cycle[motor] > MIN_DUTY_CYCLE) {
-            target_duty_cycle[motor] = MIN_DUTY_CYCLE;
+        if (motor_current[motor] >= current_limit[motor]) {
+            user_duty_cycle[motor] -= OVER_CURRENT_CHANGE;
+            target_duty_cycle[motor] -= OVER_CURRENT_CHANGE;
+            if (user_duty_cycle[motor] < 0) {
+                user_duty_cycle[motor] = 0;
+            }
         }
         tcc_set_compare_value(&tcc_mod, motor, target_duty_cycle[motor]);
-        last_current_adjust_ticks[motor] = now_ticks;
+        last_duty_adjust_ticks[motor] = now_ticks;
 
-        //// we need to time measuring from the pwm to get the floating pin during the pwm off cycle
-        //// and then to immediately get the current pin after the start of the next on cycle
+        // we need to time measuring from the pwm to get the floating pin during the pwm off cycle
+        // and then to immediately get the current pin after the start of the next on cycle
         uint32_t after_pwm_off = target_duty_cycle[motor] + PWM_REST / 2;
         uint32_t before_pwm_on = PWM_PERIOD - 200;
         uint32_t measure_time = after_pwm_off > before_pwm_on ? after_pwm_off : before_pwm_on;
@@ -744,47 +745,76 @@ void update_motor(int motor) {
     bool should_advance_state = false;
 
     average_coil[motor] = (average_coil[motor] * 255 + (motor_coil[motor] << 16) + 128) >> 8;
-    volatile uint16_t coil_threshold = average_coil[motor] >> 16;
-    volatile uint16_t min_thresh = (motor == 0) ? 50 : 50;
-    if (coil_threshold < min_thresh) {
-        coil_threshold = min_thresh;
-    }
-    if (coil_high[motor] && motor_coil[motor] <= coil_threshold) {
-        coil_high[motor] = false;
-        change_after_delay[motor] = true;
-        int32_t new_interval = (now_ticks - last_zero_ticks[motor]) << 16;
-        state_change_interval[motor] = (state_change_interval[motor] * 255 + new_interval + 128) >> 8;
-        last_zero_ticks[motor] = now_ticks;
-    } else if (!coil_high[motor] && motor_coil[motor] > coil_threshold) {
-        coil_high[motor] = true;
-        change_after_delay[motor] = true;
-        int32_t new_interval = (now_ticks - last_zero_ticks[motor]) << 16;
-        state_change_interval[motor] = (state_change_interval[motor] * 255 + new_interval + 128) >> 8;
-        last_zero_ticks[motor] = now_ticks;
-    }
+    //if (sync_done[motor]) {
+        volatile uint16_t coil_threshold = average_coil[motor] >> 16;
+        volatile uint16_t min_thresh = 50;//(motor == 0) ? 100 : 250;
+        if (coil_threshold < min_thresh) {
+            coil_threshold = min_thresh;
+        }
+        if (coil_high[motor] && motor_coil[motor] <= coil_threshold) {
+            coil_high[motor] = false;
+            change_after_delay[motor] = true;
+            int32_t new_interval = (now_ticks - last_zero_ticks[motor]) << 16;
+            state_change_interval[motor] = (state_change_interval[motor] * 255 + new_interval + 128) >> 8;
+            last_zero_ticks[motor] = now_ticks;
+        } else if (!coil_high[motor] && motor_coil[motor] > coil_threshold) {
+            coil_high[motor] = true;
+            change_after_delay[motor] = true;
+            int32_t new_interval = (now_ticks - last_zero_ticks[motor]) << 16;
+            state_change_interval[motor] = (state_change_interval[motor] * 255 + new_interval + 128) >> 8;
+            last_zero_ticks[motor] = now_ticks;
+        }
+    //}
 
-    if (target_duty_cycle[motor] > 0 && motor_hz[motor] > 0 && sync_done[motor]) {
+    if (target_duty_cycle[motor] > 0 && motor_ehz[motor] > 0 && sync_done[motor]) {
         if (change_after_delay[motor]) {// && (now_ticks - last_zero_ticks[motor]) > state_change_interval[motor] >> 17) {
             should_advance_state = true;
             change_after_delay[motor] = false;
         }
     } else {
-        // ramp up one hz at a time from sync start to end hz
-        if (motor_hz[motor] == 0) {
-            sync_start_ticks[motor] = now_ticks;
-            sync_done[motor] = false;
+        if (!align_started[motor]) {
+            align_started[motor] = true;
+            align_start_ticks[motor] = now_ticks;
+
+            motor_state[motor] = 0;
+            target_duty_cycle[motor] = SYNC_DUTY_BY_3EHZ[0];
+            update_motor_state(motor);
+
+            last_transition_ticks[motor] = now_ticks;
+            motor_count[motor] = 0;
+        } else if (!align_done[motor]) {
+            if (now_ticks - align_start_ticks[motor] > ALIGN_STEP_TICKS) {
+                align_done[motor] = true;
+                //target_duty_cycle[motor] = 0;
+                //user_duty_cycle[motor] = 0;
+                sync_start_ticks[motor] = now_ticks;
+                motor_min_ehz[motor] = SYNCHRONOUS_EHZ_START;
+                target_duty_cycle[motor] = SYNC_DUTY_BY_3EHZ[0];
+            }
+        } else {
+            uint32_t step_ticks = (motor_min_ehz[motor] == SYNCHRONOUS_EHZ_START) ? SYNCHRONOUS_FIRST_STEP_TICKS : SYNCHRONOUS_STEP_TICKS;
+            if (now_ticks - sync_start_ticks[motor] > step_ticks) {
+                if (motor_ehz[motor] >= SYNCHRONOUS_EHZ_END) {
+                    sync_done[motor] = true;
+                    motor_min_ehz[motor] = SYNCHRONOUS_EHZ_START;
+                } else {
+                    motor_min_ehz[motor] = motor_min_ehz[motor] + 1;
+                    uint8_t idx = motor_min_ehz[motor] / 3;
+                    if (idx >= SYNC_DUTY_N) {
+                        idx = SYNC_DUTY_N - 1;
+                    }
+                    target_duty_cycle[motor] = SYNC_DUTY_BY_3EHZ[idx];
+                    sync_start_ticks[motor] = now_ticks;
+                }
+            }
         }
-        if (now_ticks - sync_start_ticks[motor] > SYNCHRONOUS_STEP_TICKS) {
-            sync_done[motor] = true;
-            // prime the pid to avoid jolt in derivative term
-            pid_next(&current_pid[motor], curr);
-        }
-        motor_min_hz[motor] = SYNCHRONOUS_HZ;
     }
 
-    uint16_t ticks_per_transition = PWM_FREQ / motor_min_hz[motor] / 42;
-    if ((now_ticks - last_transition_ticks[motor]) >= ticks_per_transition) {
-        should_advance_state = true;
+    if (motor_min_ehz[motor]) {
+        uint16_t ticks_per_transition = PWM_FREQ / motor_min_ehz[motor] / 6;
+        if ((now_ticks - last_transition_ticks[motor]) >= ticks_per_transition) {
+            should_advance_state = true;
+        }
     }
 
     if (should_advance_state) {
@@ -796,37 +826,17 @@ void update_motor(int motor) {
     }
 
     if ((now_ticks - last_hz_ticks[motor]) >= PWM_FREQ / HZ_MEASUREMENT_HZ) {
-        uint32_t new_hz = (motor_count[motor] * HZ_MEASUREMENT_HZ + 21) / 42;
-        //if (motor_hz[motor] > 85 && new_hz < 80) {
-            //volatile int c = new_hz + 1;
-        //}
-        motor_hz[motor] = new_hz;
+        uint32_t new_ehz = (motor_count[motor] * HZ_MEASUREMENT_HZ + 3) / 6;
+        motor_ehz[motor] = new_ehz;
         motor_count[motor] = 0;
         last_hz_ticks[motor] = now_ticks;
         if (sync_done[motor]) {
             //motor_min_hz[motor] = (motor_hz[motor] * 15) >> 4;
-            if (motor_min_hz[motor] < SYNCHRONOUS_HZ) {
-                motor_min_hz[motor] = SYNCHRONOUS_HZ;
+            if (motor_min_ehz[motor] < SYNCHRONOUS_EHZ_START) {
+                motor_min_ehz[motor] = SYNCHRONOUS_EHZ_START;
             }
         }
     }
-}
-
-void configure_pid() {
-    // will output current in adc lsb units (that is, bits as read from the adc)
-    pid_init(&hz_pid[0], 1.0, 1.0, 0, 0, HZ_ADJUST_HZ);
-    pid_init(&hz_pid[1], 1.0, 1.0, 0, 0, HZ_ADJUST_HZ);
-    pid_set_output_limits(&hz_pid[0], 0.0, 20.0);
-    pid_set_output_limits(&hz_pid[1], 0.0, 20.0);
-    // will directly output duty cycle
-    pid_init(&current_pid[0], 0.003*PWM_PERIOD, 0.0, 0.01*PWM_PERIOD, 0, CURRENT_ADJUST_HZ);
-    pid_init(&current_pid[1], 0.003*PWM_PERIOD, 0.0000*PWM_PERIOD, 0.00*PWM_PERIOD, 0.0000*PWM_PERIOD, CURRENT_ADJUST_HZ);
-    pid_set_output_limits(&current_pid[0], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
-    pid_set_output_limits(&current_pid[1], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE);
-    pid_set_integral_limits(&current_pid[0], -MAX_DUTY_CYCLE/4, MAX_DUTY_CYCLE/4);
-    pid_set_integral_limits(&current_pid[1], -MAX_DUTY_CYCLE/4, MAX_DUTY_CYCLE/4);
-    //pid_set_output_filter(&current_pid[0], 20);
-    //pid_set_output_filter(&current_pid[1], 20);
 }
 
 int main() {
@@ -835,14 +845,16 @@ int main() {
     configure_adc();
     configure_i2c();
     configure_pwm();
-    configure_pid();
 
     volatile uint32_t update_count = 0;
     while (1) {
         volatile uint16_t update_rate = (uint64_t)update_count * PWM_FREQ / ticks_pwm_cycles;
 
-        update_motor(0);
+        motor_current[0] = motor_current_raw[0] >> 16;
+        motor_current[1] = motor_current_raw[1] >> 16;
+
         update_motor(1);
+        update_motor(0);
 
         adc_motor0_float_coil = MOTOR0_STATE_TO_FLOATING_ADC[motor_state[0]];
         adc_motor1_float_coil = MOTOR1_STATE_TO_FLOATING_ADC[motor_state[1]];
