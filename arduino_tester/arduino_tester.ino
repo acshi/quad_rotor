@@ -3,11 +3,11 @@
 #include <Wire.h>
 
 #define MOTOR1_MASK (1 << 6) // indicates to target motor1/second motor instead of motor0.
-#define SET_TARGET_HZ_MSG 1
-#define READ_TARGET_HZ_MSG 2
+#define SET_DUTY_MSG 1
+#define READ_DUTY_MSG 2
 #define READ_MEASURED_HZ_MSG 3
-#define SET_TARGET_CURRENT_MSG 4
-#define READ_TARGET_CURRENT_MSG 5
+#define SET_CURRENT_LIMIT_MSG 4
+#define READ_CURRENT_LIMIT_MSG 5
 #define READ_MEASURED_CURRENT_MSG 6
 #define READ_TEMPERATURE_MSG 7
 #define READ_ERROR_MSG 8
@@ -155,8 +155,9 @@ bool performAction(int16_t action, int address) {
       case 'hp':
         Serial << "Commands include...\n";
         Serial << "hl, hp, to show this help\n";
-        Serial << "sh, gh, mh (set/get/measured) hz target\n";
-        Serial << "sc, gc, mc (set/get/measured) current target\n";
+        Serial << "sd, gd, (set/get) duty cycle target\n";
+        Serial << "mh, measured hz target\n";
+        Serial << "sc, gc, mc, (set/get/measured) current target\n";
         Serial << "tm, temperature\n";
         Serial << "er, check for error conditions\n";
         Serial << "tw, return TWI address of device\n";
@@ -175,27 +176,27 @@ bool performAction(int16_t action, int address) {
       case 'gm':
         Serial << "Active motor is: " << motor_on << endl;
         break;
-      case 'sh':
+      case 'sd':
         value = (uint16_t)Serial.parseInt();
-        Serial << "Setting hz target to: " << (int16_t)value << endl;
-        sendMessageValue(SET_TARGET_HZ_MSG, value, address);
+        Serial << "Setting duty cycle target to: " << (int16_t)value << endl;
+        sendMessageValue(SET_DUTY_MSG, value, address);
         break;
-      case 'gh':
-        value = sendReadMessage(READ_TARGET_HZ_MSG, address);
-        Serial << "Hz target: " << (int16_t)value << endl;
+      case 'gd':
+        value = sendReadMessage(READ_DUTY_MSG, address);
+        Serial << "Duty cycle target: " << (int16_t)value << endl;
         break;
       case 'mh':
         value = sendReadMessage(READ_MEASURED_HZ_MSG, address);
-        Serial << "Hz measurement: " << (int16_t)value << endl;
+        Serial << "Hz measurement: " << (int16_t)value / 7.0 << endl;
         break;
       case 'sc':
         value = (int16_t)Serial.parseInt();
-        Serial << "Setting current target to: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
-        sendMessageValue(SET_TARGET_CURRENT_MSG, value, address);
+        Serial << "Setting current limit to: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
+        sendMessageValue(SET_CURRENT_LIMIT_MSG, value, address);
         break;
       case 'gc':
-        value = sendReadMessage(READ_TARGET_CURRENT_MSG, address);
-        Serial << "Current target: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
+        value = sendReadMessage(READ_CURRENT_LIMIT_MSG, address);
+        Serial << "Current limit: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
         break;
       case 'mc':
         value = sendReadMessage(READ_MEASURED_CURRENT_MSG, address);

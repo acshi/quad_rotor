@@ -123,20 +123,20 @@ module airfoil(foil_h, arm_l, alpha) {
 }
 
 module arm() {
-    bulb_d = 29;
+    bulb_d = 32;
     arm_w = 16;
-    arm_t = 8;
-    m_d = 16; // distance between mounting holes
+    arm_t = 5;
+    m_d = 16.6; // distance between mounting holes
     m_o = (bulb_d - m_d) / 2; // offset from edge for mounting holes
-    m_hole_d = 7.7; // center hole diameter
+    m_hole_d = 8; // center hole diameter
     cham_r = 5;
     arm_l = 140;
     connect_d = 24;
     bm_d = 12; // distance between body mounting holes
     inner1_arm_l = arm_l - bulb_d/2 - connect_d/2;
     inner2_arm_l = arm_l - bulb_d - connect_d;
-    screw_hole_d = 3.5;
-    screwhead_hole_d = 6.0;
+    screw_hole_d = 5;
+    screwhead_hole_d = 7.5;
     difference() {
         //cube([140, arm_w, arm_t]);
         union() {
@@ -150,16 +150,16 @@ module arm() {
                     slot(arm_l, bulb_d, arm_t, center_y=true);
                     difference() {
                         translate([bulb_d/2, -bulb_d/2, 0])
-                            cube([inner1_arm_l-connect_d/2, bulb_d, arm_t*2]);
+                            cube([inner1_arm_l-connect_d/4, bulb_d, arm_t*3]);
                         translate([bulb_d/2, 0, 0])
-                            cylinder(d=bulb_d, h=arm_t*2);
-                        *translate([arm_l-connect_d/2, 0, 0])
-                            cylinder(d=connect_d, h=arm_t*2);
+                            cylinder(d=bulb_d, h=arm_t*3);
+                        translate([arm_l-connect_d/2, 0, 0])
+                            cylinder(d=connect_d, h=arm_t*3);
                     }
                 }
                 // foil version
-                translate([bulb_d/2, 0, arm_t/2+1.5]) rotate([0, 90, 0]) {
-                    airfoil(arm_t-1, inner1_arm_l, 18);
+                translate([bulb_d/2, 0, arm_t/2+3]) rotate([0, 90, 0]) {
+                    airfoil(arm_t+2, inner1_arm_l+8, 18);
                 }
                 // cylinder version
                 *translate([bulb_d-2, -arm_w/2+cham_r, arm_t/2]) rotate([0, 90, 0]) {
@@ -204,6 +204,22 @@ module arm() {
                 cylinder(d=screw_hole_d, h=arm_t);
             translate([0, -bm_d/2, 0])
                 cylinder(d=screw_hole_d, h=arm_t);
+        }
+        
+        // strengthening holes -- small enough they add density
+        str_d = 2;
+        inner_l = arm_l - bulb_d - connect_d;
+        translate([bulb_d, 0, 0]) {
+            translate([inner_l/6*1, 0, 0])
+                #cylinder(d=str_d, h=arm_t*10);
+            translate([inner_l/6*2, 0, 0])
+                #cylinder(d=str_d, h=arm_t*10);
+            translate([inner_l/6*3, 0, 0])
+                #cylinder(d=str_d, h=arm_t*10);
+            translate([inner_l/6*4, 0, 0])
+                #cylinder(d=str_d, h=arm_t*10);
+            translate([inner_l/6*5, 0, 0])
+                #cylinder(d=str_d, h=arm_t*10);
         }
     }
 
