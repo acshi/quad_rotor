@@ -1,4 +1,4 @@
-update=4/26/2018 7:55:06 PM
+update=9/1/2018 5:12:46 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -60,3 +60,6 @@ LibName28=contrib
 LibName29=valves
 LibName30=ncp5901
 LibName31=SAMD21EL
+LibName32=lps25hbtr‎
+LibName33=icm-20948
+LibName34=atsams70j19a

@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP MIC4609
+D Half-Bridge Gate Driver IC Non-Inverting
+K gate driver 3 phase half bridge
+F http://ww1.microchip.com/downloads/en/DeviceDoc/20005531A.pdf
+$ENDCMP
+#
+#End Doc Library

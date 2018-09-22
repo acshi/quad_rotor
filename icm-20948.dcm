@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP ICM-20948
+D Accelerometer, Gyroscope, Magnetometer, 9 DOF Sensor
+K Accelerometer, Gyroscope, Magnetometer, 9 DOF Sensor
+F https://www.invensense.com/wp-content/uploads/2016/06/DS-000189-ICM-20948-v1.3.pdf
+$ENDCMP
+#
+#End Doc Library

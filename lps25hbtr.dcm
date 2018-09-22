@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP LPS25HBTR‎
+D Pressure Sensor 3.77 PSI ~ 18.27 PSI (26 kPa ~ 126 kPa) Absolute 24 b 10-VFLGA
+K Pressure Sensor
+F https://www.st.com/content/ccc/resource/technical/document/datasheet/9a/4c/aa/72/1f/45/4e/24/DM00141379.pdf/files/DM00141379.pdf/jcr:content/translations/en.DM00141379.pdf
+$ENDCMP
+#
+#End Doc Library

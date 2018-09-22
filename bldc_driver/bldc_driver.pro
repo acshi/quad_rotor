@@ -1,4 +1,4 @@
-update=5/1/2018 9:53:38 PM
+update=8/10/2018 12:52:17 AM
 version=1
 last_client=kicad
 [pcbnew]
@@ -205,3 +205,4 @@ LibName173=dk_TVS-Mixed-Technology
 LibName174=dk_USB-DVI-HDMI-Connectors
 LibName175=ina199a2
 LibName176=sam-swd-10
+LibName177=mic4609

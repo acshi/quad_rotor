@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP ATSAMS70J19A
+D ARM® Cortex®-M7 SAM S70 Microcontroller IC 32-Bit 300MHz 512KB (512K x 8) FLASH 64-LQFP (10x10) 
+K ARM® Cortex®-M7 SAM S70 Microcontroller IC 32-Bit 300MHz 512KB (512K x 8) FLASH 64-LQFP (10x10) 
+F http://ww1.microchip.com/downloads/en/DeviceDoc/SAM-E70S70V70V71-Family%20DataSheet-DS60001527B.pdf
+$ENDCMP
+#
+#End Doc Library
