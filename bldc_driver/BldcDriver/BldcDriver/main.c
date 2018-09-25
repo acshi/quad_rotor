@@ -50,18 +50,9 @@
 #define MOTOR0_B_ADC ADC_POSITIVE_INPUT_PIN11
 #define MOTOR0_C_ADC ADC_POSITIVE_INPUT_PIN0
 
-#define MOTOR1_CURRENT_ADC ADC_POSITIVE_INPUT_PIN12
-#define MOTOR1_A_ADC ADC_POSITIVE_INPUT_PIN7
-#define MOTOR1_B_ADC ADC_POSITIVE_INPUT_PIN6
-#define MOTOR1_C_ADC ADC_POSITIVE_INPUT_PIN13
-
 #define MOTOR0_ENABLE_A PIN_PA25
 #define MOTOR0_ENABLE_B PIN_PA24
 #define MOTOR0_ENABLE_C PIN_PA18
-
-#define MOTOR1_ENABLE_A PIN_PA15
-#define MOTOR1_ENABLE_B PIN_PA14
-#define MOTOR1_ENABLE_C PIN_PA11
 
 #define ENABLE_I_TO_MASK ((uint32_t[]){ 1 << 25, 1 << 24, 1 << 18, 1 << 15, 1 << 14, 1 << 11 })
 
@@ -69,34 +60,15 @@
 #define MOTOR0_OUT_B PIN_PA22
 #define MOTOR0_OUT_C PIN_PA19
 
-#define MOTOR1_OUT_A PIN_PA10
-#define MOTOR1_OUT_B PIN_PA05
-#define MOTOR1_OUT_C PIN_PA04
-
 #define MOTOR_I_TO_MASK ((uint32_t[]){ 1 << 23, 1 << 22, 1 << 19, 1 << 10, 1 << 5, 1 << 4 })
 #define STATE_TO_FLOATING ((uint8_t[]){ 2, 1, 0, 2, 1, 0 })
 
 // 0x1800 needs to be specified to say "referenced to GND" even though we aren't in differential mode. :/
 #define MOTOR0_STATE_TO_FLOATING_ADC ((uint16_t[]){ 0x1800 | MOTOR0_C_ADC, 0x1800 | MOTOR0_B_ADC, 0x1800 | MOTOR0_A_ADC, \
                                                     0x1800 | MOTOR0_C_ADC, 0x1800 | MOTOR0_B_ADC, 0x1800 | MOTOR0_A_ADC })
-#define MOTOR1_STATE_TO_FLOATING_ADC ((uint16_t[]){ 0x1800 | MOTOR1_C_ADC, 0x1800 | MOTOR1_B_ADC, 0x1800 | MOTOR1_A_ADC, \
-                                                    0x1800 | MOTOR1_C_ADC, 0x1800 | MOTOR1_B_ADC, 0x1800 | MOTOR1_A_ADC })
-
-// 0-2 abc of motor 1, 3-5 abc of motor 2
-void motor_enable(int idx) {
-    //PORT->Group[0].DIRCLR.reg = 1 << pin_num; // to input
-    //PORT->Group[0].PINCFG[pin_num].bit.PULLEN = 1; // w/ pull-up
-    PORT->Group[0].OUTSET.reg = ENABLE_I_TO_MASK[idx]; // high
-}
-
 void motor_disable(int idx) {
     //PORT->Group[0].DIRSET.reg = 1 << pin_num; // to output
     PORT->Group[0].OUTCLR.reg = ENABLE_I_TO_MASK[idx]; // low
-}
-
-// 0-2 abc of motor 1, 3-5 abc of motor 2
-void motor_set(int idx) {
-    PORT->Group[0].OUTSET.reg = MOTOR_I_TO_MASK[idx]; // high
 }
 
 void motor_clear(int idx) {
@@ -108,10 +80,8 @@ void motor_clear(int idx) {
 // each motor only has one coil than needs active pwm.
 // one more coil will be ground, and one coil will float.
 #define MOTOR0_PWM_CHANNEL 0
-#define MOTOR1_PWM_CHANNEL 1
 
 // Communication
-#define MOTOR1_MASK (1 << 6) // indicates to target motor1/second motor instead of motor0.
 #define SET_DUTY_MSG 1
 #define READ_DUTY_MSG 2
 #define READ_MEASURED_HZ_MSG 3
@@ -126,7 +96,7 @@ void motor_clear(int idx) {
 #define VAL_END_BYTE 0xec
 #define MSG_MARK_BYTE 0xfe
 
-#define ADC_CURRENT_CHANNEL ((uint16_t[]){ 0x1800 | MOTOR0_CURRENT_ADC, 0x1800 | MOTOR1_CURRENT_ADC})
+#define ADC_CURRENT_CHANNEL (0x1800 | MOTOR0_CURRENT_ADC)
 #define ADC_TEMP_CHANNEL (0x1800 | ADC_POSITIVE_INPUT_TEMP)
 struct adc_module adc_mod;
 uint8_t adc_started_channel = MOTOR0_CURRENT_ADC;
@@ -136,63 +106,42 @@ uint8_t adc_aux_i = 0;
 
 uint8_t adc_motor_on = 0;
 uint16_t adc_motor0_float_coil = 0;
-uint16_t adc_motor1_float_coil = 0;
 
-// the adc readings from coils A, B, C
-//volatile uint16_t motor0_coils[3];
-//volatile uint16_t motor1_coils[3];
-volatile uint16_t motor_coil[2];
-volatile uint32_t motor_current_raw[2]; // 16-bit fixed point
-volatile uint32_t motor_current_combined_raw[2]; // 16-bit fixed point
-uint16_t motor_current[2]; // same units as are communicated over i2c
+volatile uint32_t motor_current_raw; // 16-bit fixed point
+volatile uint32_t motor_current_combined_raw; // 16-bit fixed point
+uint16_t motor_current; // same units as are communicated over i2c
 volatile uint16_t temp;
-volatile uint32_t motor_ehz[2];
-volatile uint32_t motor_count[2]; // state change count
+volatile uint32_t motor_ehz;
+volatile uint32_t motor_count; // state change count
 
 #define COIL_BUFFER_N 1024
-int16_t coil_buffer[COIL_BUFFER_N] = { 0 };
-int16_t coil_states[COIL_BUFFER_N] = { 0 };
-uint16_t coil_buffer_i = 0;
+int16_t debug_buffer[COIL_BUFFER_N] = { 0 };
+int16_t debug_states[COIL_BUFFER_N] = { 0 };
+uint16_t debug_buffer_i = 0;
 
 // current state of each motor, in terms of which coil is power, ground, and floating
-uint8_t motor_state[2] = { 0 };
+uint8_t motor_state = 0;
 
-// the bits to set on pwm overflow/reset
-uint32_t motor_pwm_bits = 0;
+volatile uint16_t current_limit = 2048;
 
-// whether the following settings need to be applied on the next pwm pulse
-volatile bool new_motor_bits = false;
-// bits to set/clear on next pwm pulse
-uint32_t motor_enable_bits = 0;
-uint32_t motor_disable_clear_bits = 0;
-// update 
-uint32_t motor_pwm_bits_next = 0;
+uint16_t user_duty_cycle = 0; // this is the one directly set by commands
+uint16_t target_duty_cycle = 0;
+bool coil_high = false;
 
-volatile uint16_t current_limit[2] = { 2048, 2048 };
-
-uint16_t user_duty_cycle[2] = { 0, 0 }; // this is the one directly set by commands
-uint16_t target_duty_cycle[2] = { 0, 0 };
-//uint16_t duty_cycle_on_time = 0;
-//uint32_t duty_cycle_measured[2] = { 0 };
-int32_t sense_coil_min[2] = { 0 };
-int32_t sense_coil_max[2] = { 0 };
-bool coil_high[2] = { false };
-uint16_t adc_measurement_time[2] = { 0 };
-
-uint16_t motor_min_ehz[2] = { 0 }; // minimum hz for transitions in case we miss commutation, also for synchronous start up
-uint32_t last_transition_ticks[2] = { 0 }; // for timing transitions
-uint32_t last_hz_adjust_ticks[2] = { 0 }; // for hz pid
-uint32_t last_duty_adjust_ticks[2] = { 0 }; // for current pid
-uint32_t last_hz_ticks[2] = { 0 }; // for hz measurement
-uint32_t sync_start_ticks[2] = { 0 }; // synchronous starting
-bool sync_done[2] = { false, false };
-uint32_t align_start_ticks[2] = { 0 };
-bool align_started[2] = { false, false };
-bool align_done[2] = { false, false };
-uint32_t last_zero_ticks[2] = { 0 };
-uint32_t state_change_interval[2] = { 0 }; // average ticks between state changes, 16-bit fixed point to allow filtering/smoothing
-bool change_after_delay[2] = { false };
-uint32_t average_coil[2] = { 0 }; // average value of floating coil, for determining threshold to use, 16-bit fixed point
+uint16_t motor_min_ehz = 0; // minimum hz for transitions in case we miss commutation, also for synchronous start up
+uint32_t last_transition_ticks = 0; // for timing transitions
+uint32_t last_hz_adjust_ticks = 0; // for hz pid
+uint32_t last_duty_adjust_ticks = 0; // for current pid
+uint32_t last_hz_ticks = 0; // for hz measurement
+uint32_t sync_start_ticks = 0; // synchronous starting
+bool sync_done = false;
+uint32_t align_start_ticks = 0;
+bool align_started = false;
+bool align_done = false;
+uint32_t last_zero_ticks = 0;
+uint32_t state_change_interval = 0; // average ticks between state changes, 16-bit fixed point to allow filtering/smoothing
+bool change_after_delay = false;
+uint32_t average_coil = 0; // average value of floating coil, for determining threshold to use, 16-bit fixed point
 
 // incremented at whatever our pwm frequency
 volatile uint32_t ticks_pwm_cycles = 0;
@@ -239,75 +188,26 @@ static inline void set_aux_adc_compare(uint16_t count) {
 static inline void start_aux_adc_read() {
     adc_aux_i = (adc_aux_i + 1) % 4;
     if (adc_aux_i < 2) {
-        start_analog_read(ADC_CURRENT_CHANNEL[adc_motor_on]);
+        start_analog_read(ADC_CURRENT_CHANNEL);
     } else {
         start_analog_read(ADC_TEMP_CHANNEL);
     }
     adc_motor_on = (adc_motor_on + 1) % 2;
-    set_aux_adc_compare(adc_measurement_time[adc_motor_on]);
-}
-
-static inline void start_coil_adc_read() {
-    uint16_t adc_channel = (adc_motor_on == 0) ? adc_motor0_float_coil : adc_motor1_float_coil;
-    start_analog_read(adc_channel);
+    //set_aux_adc_compare(adc_measurement_time[adc_motor_on]);
 }
 
 void ADC_Handler() {
-    static uint32_t adc_count = 0;
-    static volatile uint16_t adc_rate;
-
-    bool got_coil_value = false;
     volatile uint16_t adc_val;
-    uint16_t last_adc_channel = adc_started_channel;
+    //uint16_t last_adc_channel = adc_started_channel;
 
     switch (adc_started_channel) {
-        case MOTOR0_A_ADC:
-        case MOTOR0_B_ADC:
-        case MOTOR0_C_ADC:
-            start_aux_adc_read();
-            adc_val = read_analog();
-            if (ticks_pwm_cycles - last_transition_ticks[0] >= state_change_interval[0] >> 19) {
-                motor_coil[0] = adc_val;
-                coil_buffer[coil_buffer_i] = motor_coil[0];
-                coil_buffer_i = (coil_buffer_i + 1) % COIL_BUFFER_N;
-                coil_states[coil_buffer_i] = last_adc_channel;
-            }
-            got_coil_value = true;
-            break;
-        case MOTOR1_A_ADC:
-        case MOTOR1_B_ADC:
-        case MOTOR1_C_ADC:
-            start_aux_adc_read();
-            adc_val = read_analog();
-            if (ticks_pwm_cycles - last_transition_ticks[1] >= state_change_interval[1] >> 19) {
-                motor_coil[1] = adc_val;
-                //coil_buffer[coil_buffer_i] = motor_coil[1];
-                //coil_buffer_i = (coil_buffer_i + 1) % COIL_BUFFER_N;
-                //coil_states[coil_buffer_i] = last_adc_channel;
-            }
-            got_coil_value = true;
-            break;
         case MOTOR0_CURRENT_ADC:
             adc_val = read_analog();
-            motor_current_raw[0] = ((uint64_t)motor_current_raw[0] * 511 + (adc_val << 16) + 256) >> 9;
-            //coil_buffer[coil_buffer_i] = adc_val;
-            //coil_buffer_i = (coil_buffer_i + 1) % COIL_BUFFER_N;
-            break;
-        case MOTOR1_CURRENT_ADC:
-            adc_val = read_analog();
-            motor_current_raw[1] = ((uint64_t)motor_current_raw[1] * 511 + (adc_val << 16) + 256) >> 9;
-            //coil_buffer[coil_buffer_i] = adc_val;
-            //coil_buffer_i = (coil_buffer_i + 1) % COIL_BUFFER_N;
+            motor_current_raw = ((uint64_t)motor_current_raw * 511 + (adc_val << 16) + 256) >> 9;
             break;
         case ADC_POSITIVE_INPUT_TEMP:
             temp = read_analog();
             break;
-    }
-
-    if (got_coil_value) {
-        adc_count++;
-        adc_rate = (uint32_t)adc_count * PWM_FREQ / ticks_pwm_cycles;
-        adc_rate;
     }
 }
 
@@ -402,9 +302,6 @@ static void i2c_periph_read_complete(struct i2c_slave_module *const module) {
 
     int16_t value = (buf[3] << 8) | buf[4];
 
-    int motor = (buf[0] & MOTOR1_MASK) ? 1 : 0;
-    buf[0] &= ~MOTOR1_MASK;
-
     i2c_out_bytes = 3; // setSendReply responds with three bytes
     switch (buf[0]) {
         case SET_DUTY_MSG:
@@ -412,27 +309,27 @@ static void i2c_periph_read_complete(struct i2c_slave_module *const module) {
                 if (value > MAX_DUTY_CYCLE) {
                     value = MAX_DUTY_CYCLE;
                 }
-                user_duty_cycle[motor] = value;
+                user_duty_cycle = value;
             }
             i2c_out_bytes = 0;
             break;
         case READ_DUTY_MSG:
-            set_send_reply(i2c_out_buf, user_duty_cycle[motor]);
+            set_send_reply(i2c_out_buf, user_duty_cycle);
             break;
         case READ_MEASURED_HZ_MSG:
-            set_send_reply(i2c_out_buf, motor_ehz[motor]);
+            set_send_reply(i2c_out_buf, motor_ehz);
             break;
         case SET_CURRENT_LIMIT_MSG:
             if (gotValue) {
-                current_limit[motor] = value;
+                current_limit = value;
             }
             i2c_out_bytes = 0;
             break;
         case READ_CURRENT_LIMIT_MSG:
-            set_send_reply(i2c_out_buf, current_limit[motor]);
+            set_send_reply(i2c_out_buf, current_limit);
             break;
         case READ_MEASURED_CURRENT_MSG:
-            set_send_reply(i2c_out_buf, motor_current[motor]);
+            set_send_reply(i2c_out_buf, motor_current);
             break;
         case READ_TEMPERATURE_MSG:
             set_send_reply(i2c_out_buf, temp);
@@ -497,19 +394,12 @@ static void configure_gpio_mux() {
     system_pinmux_pin_set_config(MOTOR0_ENABLE_A, &config);
     system_pinmux_pin_set_config(MOTOR0_ENABLE_B, &config);
     system_pinmux_pin_set_config(MOTOR0_ENABLE_C, &config);
-    system_pinmux_pin_set_config(MOTOR1_ENABLE_A, &config);
-    system_pinmux_pin_set_config(MOTOR1_ENABLE_B, &config);
-    system_pinmux_pin_set_config(MOTOR1_ENABLE_C, &config);
 
     system_pinmux_pin_set_config(MOTOR0_OUT_A, &config);
     system_pinmux_pin_set_config(MOTOR0_OUT_B, &config);
     system_pinmux_pin_set_config(MOTOR0_OUT_C, &config);
-    system_pinmux_pin_set_config(MOTOR1_OUT_A, &config);
-    system_pinmux_pin_set_config(MOTOR1_OUT_B, &config);
-    system_pinmux_pin_set_config(MOTOR1_OUT_C, &config);
 
     system_pinmux_pin_set_config(MOTOR0_STATUS, &config);
-    system_pinmux_pin_set_config(MOTOR1_STATUS, &config);
 
     //system_pinmux_group_set_output_strength(&PORT->Group[0], 0xffffffff, SYSTEM_PINMUX_PIN_STRENGTH_HIGH);
 }
@@ -517,42 +407,11 @@ static void configure_gpio_mux() {
 void TCC0_Handler() {
     TCC_INTFLAG_Type intflag = TCC0->INTFLAG;
     if (intflag.bit.OVF) {
-        if (new_motor_bits) {
-            new_motor_bits = false;
-            motor_pwm_bits = motor_pwm_bits_next;
-            PORT->Group[0].OUTSET.reg = motor_enable_bits;
-            PORT->Group[0].OUTCLR.reg = motor_disable_clear_bits;
-        }
-
-        PORT->Group[0].OUTSET.reg = motor_pwm_bits;
-        //TCC0->CTRLBSET.bit.CMD = TCC_CTRLBSET_CMD_READSYNC_Val;
-        //while (TCC0->SYNCBUSY.bit.CTRLB) { }
-        //duty_cycle_on_time = TCC0->COUNT.reg;
+        //PORT->Group[0].OUTSET.reg = motor_pwm_bits;
         ticks_pwm_cycles++;
     }
     // counter match motor 0
     if (intflag.bit.MC0) {
-        uint32_t pin_mask = MOTOR_I_TO_MASK[0] | MOTOR_I_TO_MASK[1] | MOTOR_I_TO_MASK[2];
-        PORT->Group[0].OUTCLR.reg = pin_mask; // clear
-        //TCC0->CTRLBSET.bit.CMD = TCC_CTRLBSET_CMD_READSYNC_Val;
-        //while (TCC0->SYNCBUSY.bit.CTRLB) { }
-        //uint16_t count = TCC0->COUNT.reg;
-        //uint16_t measured_time = (duty_cycle_on_time <= count) ? TCC0->COUNT.reg - duty_cycle_on_time : 0;
-        //duty_cycle_measured[0] = (255 * duty_cycle_measured[0] + (measured_time << 16) + 128) >> 8;
-    }
-    // counter match motor 1
-    if (intflag.bit.MC1) {
-        uint32_t pin_mask = MOTOR_I_TO_MASK[3] | MOTOR_I_TO_MASK[4] | MOTOR_I_TO_MASK[5];
-        PORT->Group[0].OUTCLR.reg = pin_mask; // clear
-        //TCC0->CTRLBSET.bit.CMD = TCC_CTRLBSET_CMD_READSYNC_Val;
-        //while (TCC0->SYNCBUSY.bit.CTRLB) { }
-        //volatile uint16_t count = TCC0->COUNT.reg;
-        //volatile uint16_t measured_time = (duty_cycle_on_time <= count) ? TCC0->COUNT.reg - duty_cycle_on_time : 0;
-        //duty_cycle_measured[1] = (15 * duty_cycle_measured[1] + (measured_time << 16)) >> 4;
-    }
-    // match 2, right before pwm goes high again, for floating coil measurements
-    if (intflag.bit.MC2) {
-        start_coil_adc_read();
     }
     TCC0->INTFLAG.reg = intflag.reg; // clear all bits
 }
@@ -579,32 +438,26 @@ static void configure_pwm() {
     configure_gpio_mux();
 
     // start up these comparisons, as the compare values update in the interrupt handler
-    adc_measurement_time[0] = PWM_PERIOD - 200;
-    adc_measurement_time[1] = PWM_PERIOD - 200;
     set_aux_adc_compare(PWM_PERIOD - 200);
     //target_current[0] = 1000;
     //target_duty_cycle[0] = 1000;
     //tcc_set_compare_value(&tcc_mod, 0, 1000);
 }
 
-void update_motor_state(int motor) {
-    int offset = (motor == 1) ? 3 : 0;
-    uint8_t state = motor_state[motor];
-
-    sense_coil_min[motor] = 0;
-    sense_coil_max[motor] = 0;
+void update_motor_state() {
+    uint8_t state = motor_state;
 
     // reset our own bits in the active pin set/mask bits
-    uint32_t motor_mask = MOTOR_I_TO_MASK[0 + offset] | MOTOR_I_TO_MASK[1 + offset] | MOTOR_I_TO_MASK[2 + offset];
-    motor_pwm_bits_next &= ~motor_mask;
-    motor_disable_clear_bits &= ~motor_mask;
+    uint32_t motor_mask = MOTOR_I_TO_MASK[0] | MOTOR_I_TO_MASK[1] | MOTOR_I_TO_MASK[2];
+    //motor_pwm_bits_next &= ~motor_mask;
+    //motor_disable_clear_bits &= ~motor_mask;
 
-    uint32_t enable_mask = ENABLE_I_TO_MASK[0 + offset] | ENABLE_I_TO_MASK[1 + offset] | ENABLE_I_TO_MASK[2 + offset];
-    motor_enable_bits &= ~enable_mask;
-    motor_disable_clear_bits &= ~enable_mask;
+    //uint32_t enable_mask = ENABLE_I_TO_MASK[0] | ENABLE_I_TO_MASK[1] | ENABLE_I_TO_MASK[2];
+    //motor_enable_bits &= ~enable_mask;
+    //motor_disable_clear_bits &= ~enable_mask;
 
     // Sanity/safety check! or the motor could get stuck on 100%!
-    if (target_duty_cycle[motor] == 0 || (user_duty_cycle[motor] == 0 && motor_current[motor] < MIN_MOTOR_CURRENT)) {
+    if (target_duty_cycle == 0 || (user_duty_cycle == 0 && motor_current < MIN_MOTOR_CURRENT)) {
         PORT->Group[0].OUTCLR.reg = motor_mask; // clear them completely
         return;
     }
@@ -612,228 +465,196 @@ void update_motor_state(int motor) {
     switch (state) {
         case 0:
         case 3:
-            motor_enable_bits |= ENABLE_I_TO_MASK[0 + offset] | ENABLE_I_TO_MASK[1 + offset];
-            motor_disable_clear_bits |= ENABLE_I_TO_MASK[2 + offset];
+            //motor_enable_bits |= ENABLE_I_TO_MASK[0] | ENABLE_I_TO_MASK[1];
+            //motor_disable_clear_bits |= ENABLE_I_TO_MASK[2];
             
-            //motor_enable(0 + offset);
-            //motor_enable(1 + offset);
-            //motor_disable(2 + offset);
+            //motor_enable(0);
+            //motor_enable(1);
+            //motor_disable(2 );
             if (state == 0) {
-                motor_disable_clear_bits |= MOTOR_I_TO_MASK[1 + offset];
-                //motor_clear(1 + offset);
-                motor_pwm_bits_next |= MOTOR_I_TO_MASK[0 + offset];
+                //motor_disable_clear_bits |= MOTOR_I_TO_MASK[1];
+                ////motor_clear(1);
+                //motor_pwm_bits_next |= MOTOR_I_TO_MASK[0];
             } else {
-                motor_disable_clear_bits |= MOTOR_I_TO_MASK[0 + offset];
-                //motor_clear(0 + offset);
-                motor_pwm_bits_next |= MOTOR_I_TO_MASK[1 + offset];
+                //motor_disable_clear_bits |= MOTOR_I_TO_MASK[0];
+                ////motor_clear(0);
+                //motor_pwm_bits_next |= MOTOR_I_TO_MASK[1];
             }
             break;
         case 1:
         case 4:
-            motor_enable_bits |= ENABLE_I_TO_MASK[0 + offset] | ENABLE_I_TO_MASK[2 + offset];
-            motor_disable_clear_bits |= ENABLE_I_TO_MASK[1 + offset];
+            //motor_enable_bits |= ENABLE_I_TO_MASK[0] | ENABLE_I_TO_MASK[2];
+            //motor_disable_clear_bits |= ENABLE_I_TO_MASK[1];
 
-            //motor_enable(0 + offset);
-            //motor_disable(1 + offset);
-            //motor_enable(2 + offset);
+            //motor_enable(0);
+            //motor_disable(1);
+            //motor_enable(2);
             if (state == 1) {
-                motor_disable_clear_bits |= MOTOR_I_TO_MASK[2 + offset];
-                //motor_clear(2 + offset);
-                motor_pwm_bits_next |= MOTOR_I_TO_MASK[0 + offset];
+                //motor_disable_clear_bits |= MOTOR_I_TO_MASK[2];
+                ////motor_clear(2);
+                //motor_pwm_bits_next |= MOTOR_I_TO_MASK[0];
             } else {
-                motor_disable_clear_bits |= MOTOR_I_TO_MASK[0 + offset];
-                //motor_clear(0 + offset);
-                motor_pwm_bits_next |= MOTOR_I_TO_MASK[2 + offset];
+                //motor_disable_clear_bits |= MOTOR_I_TO_MASK[0];
+                ////motor_clear(0);
+                //motor_pwm_bits_next |= MOTOR_I_TO_MASK[2];
             }
             break;
         case 2:
         case 5:
-            motor_enable_bits |= ENABLE_I_TO_MASK[1 + offset] | ENABLE_I_TO_MASK[2 + offset];
-            motor_disable_clear_bits |= ENABLE_I_TO_MASK[0 + offset];
-            //motor_disable(0 + offset);
-            //motor_enable(1 + offset);
-            //motor_enable(2 + offset);
+            //motor_enable_bits |= ENABLE_I_TO_MASK[1] | ENABLE_I_TO_MASK[2];
+            //motor_disable_clear_bits |= ENABLE_I_TO_MASK[0];
+            //motor_disable(0);
+            //motor_enable(1);
+            //motor_enable(2);
             if (state == 2) {
-                motor_disable_clear_bits |= MOTOR_I_TO_MASK[2 + offset];
-                //motor_clear(2 + offset);
-                motor_pwm_bits_next |= MOTOR_I_TO_MASK[1 + offset];
+                //motor_disable_clear_bits |= MOTOR_I_TO_MASK[2];
+                ////motor_clear(2);
+                //motor_pwm_bits_next |= MOTOR_I_TO_MASK[1];
             } else {
-                motor_disable_clear_bits |= MOTOR_I_TO_MASK[1 + offset];
-                //motor_clear(1 + offset);
-                motor_pwm_bits_next |= MOTOR_I_TO_MASK[2 + offset];
+                //motor_disable_clear_bits |= MOTOR_I_TO_MASK[1];
+                ////motor_clear(1);
+                //motor_pwm_bits_next |= MOTOR_I_TO_MASK[2];
             }
             break;
     }
-    new_motor_bits = true;
 }
 
-void update_motor(int motor) {
-    int offset = (motor == 1) ? 3 : 0;
+void update_motor() {
+    //uint32_t combined_raw = (motor_current_raw / PWM_PERIOD) * target_duty_cycle << 4; // w/ a correction factor to make it more... accurate?
+    //motor_current_combined_raw = (motor_current_combined_raw * 127 + combined_raw) >> 7;
+    //uint16_t curr = ; //motor_current_combined_raw >> 16;
 
-    //uint32_t combined_raw = (motor_current_raw[motor] / PWM_PERIOD) * target_duty_cycle[motor] << 4; // w/ a correction factor to make it more... accurate?
-    //motor_current_combined_raw[motor] = (motor_current_combined_raw[motor] * 127 + combined_raw) >> 7;
-    //uint16_t curr = ; //motor_current_combined_raw[motor] >> 16;
+    if ((user_duty_cycle == 0 || current_limit == 0) && (!sync_done || target_duty_cycle <= MIN_DUTY_CYCLE || motor_current < MIN_MOTOR_CURRENT)) {
+        motor_disable(0);
+        motor_disable(1);
+        motor_disable(2);
 
-    if ((user_duty_cycle[motor] == 0 || current_limit[motor] == 0) && (!sync_done[motor] || target_duty_cycle[motor] <= MIN_DUTY_CYCLE || motor_current[motor] < MIN_MOTOR_CURRENT)) {
-        motor_disable(0 + offset);
-        motor_disable(1 + offset);
-        motor_disable(2 + offset);
+        PORT->Group[0].OUTCLR.reg = 1 << MOTOR0_STATUS;
 
-        PORT->Group[0].OUTCLR.reg = 1 << ((motor == 1) ? MOTOR1_STATUS : MOTOR0_STATUS);
-
-        if (target_duty_cycle[motor] != 0) {
-            target_duty_cycle[motor] = 0;
-            tcc_set_compare_value(&tcc_mod, motor, 0);
+        if (target_duty_cycle != 0) {
+            target_duty_cycle = 0;
+            tcc_set_compare_value(&tcc_mod, 0, 0);
         }
 
-        motor_ehz[motor] = 0;
-        //duty_cycle_measured[motor] = 0;
-        update_motor_state(motor); // turn off pwm too
+        motor_ehz = 0;
+        //duty_cycle_measured = 0;
+        update_motor_state(); // turn off pwm too
 
-        motor_clear(0 + offset);
-        motor_clear(1 + offset);
-        motor_clear(2 + offset);
+        motor_clear(0);
+        motor_clear(1);
+        motor_clear(2);
 
-        align_started[motor] = false;
-        align_done[motor] = false;
-        sync_done[motor] = false;
-        motor_min_ehz[motor] = 0;
+        align_started = false;
+        align_done = false;
+        sync_done = false;
+        motor_min_ehz = 0;
 
         return;
     }
 
-    PORT->Group[0].OUTSET.reg = 1 << ((motor == 1) ? MOTOR1_STATUS : MOTOR0_STATUS);
+    PORT->Group[0].OUTSET.reg = 1 << MOTOR0_STATUS;
 
     volatile uint32_t now_ticks = ticks_pwm_cycles;
-    bool time_to_adjust = now_ticks - last_duty_adjust_ticks[motor] > DUTY_ADJUST_TICKS;
-    if ((current_limit[motor] > 0 || target_duty_cycle[motor] > MIN_DUTY_CYCLE) && time_to_adjust) {
-        if (sync_done[motor]) {
-            int16_t diff = (int16_t)user_duty_cycle[motor] - (int16_t)target_duty_cycle[motor];
+    bool time_to_adjust = now_ticks - last_duty_adjust_ticks > DUTY_ADJUST_TICKS;
+    if ((current_limit > 0 || target_duty_cycle > MIN_DUTY_CYCLE) && time_to_adjust) {
+        if (sync_done) {
+            int16_t diff = (int16_t)user_duty_cycle - (int16_t)target_duty_cycle;
             if (diff > MAX_DUTY_CHANGE) {
                 diff = MAX_DUTY_CHANGE;
             }
             if (diff < -MAX_DUTY_CHANGE) {
                 diff = -MAX_DUTY_CHANGE;
             }
-            target_duty_cycle[motor] += diff;
+            target_duty_cycle += diff;
 
-            if (target_duty_cycle[motor] < MIN_DUTY_CYCLE) {
-                target_duty_cycle[motor] = MIN_DUTY_CYCLE;
+            if (target_duty_cycle < MIN_DUTY_CYCLE) {
+                target_duty_cycle = MIN_DUTY_CYCLE;
             }
-            if (target_duty_cycle[motor] > MAX_DUTY_CYCLE) {
-                target_duty_cycle[motor] = MAX_DUTY_CYCLE;
+            if (target_duty_cycle > MAX_DUTY_CYCLE) {
+                target_duty_cycle = MAX_DUTY_CYCLE;
             }
         }
-        if (motor_current[motor] >= current_limit[motor]) {
-            user_duty_cycle[motor] -= OVER_CURRENT_CHANGE;
-            target_duty_cycle[motor] -= OVER_CURRENT_CHANGE;
-            if (user_duty_cycle[motor] < 0) {
-                user_duty_cycle[motor] = 0;
+        if (motor_current >= current_limit) {
+            user_duty_cycle -= OVER_CURRENT_CHANGE;
+            target_duty_cycle -= OVER_CURRENT_CHANGE;
+            if (user_duty_cycle < 0) {
+                user_duty_cycle = 0;
             }
         }
-        tcc_set_compare_value(&tcc_mod, motor, target_duty_cycle[motor]);
-        last_duty_adjust_ticks[motor] = now_ticks;
-
-        // we need to time measuring from the pwm to get the floating pin during the pwm off cycle
-        // and then to immediately get the current pin after the start of the next on cycle
-        uint32_t after_pwm_off = target_duty_cycle[motor] + PWM_REST / 2;
-        uint32_t before_pwm_on = PWM_PERIOD - 200;
-        uint32_t measure_time = after_pwm_off > before_pwm_on ? after_pwm_off : before_pwm_on;
-        adc_measurement_time[motor] = measure_time;
+        tcc_set_compare_value(&tcc_mod, 0, target_duty_cycle);
+        last_duty_adjust_ticks = now_ticks;
     }
 
     bool should_advance_state = false;
 
-    average_coil[motor] = (average_coil[motor] * 255 + (motor_coil[motor] << 16) + 128) >> 8;
-    //if (sync_done[motor]) {
-        volatile uint16_t coil_threshold = average_coil[motor] >> 16;
-        volatile uint16_t min_thresh = 50;//(motor == 0) ? 100 : 250;
-        if (coil_threshold < min_thresh) {
-            coil_threshold = min_thresh;
-        }
-        if (coil_high[motor] && motor_coil[motor] <= coil_threshold) {
-            coil_high[motor] = false;
-            change_after_delay[motor] = true;
-            int32_t new_interval = (now_ticks - last_zero_ticks[motor]) << 16;
-            state_change_interval[motor] = (state_change_interval[motor] * 255 + new_interval + 128) >> 8;
-            last_zero_ticks[motor] = now_ticks;
-        } else if (!coil_high[motor] && motor_coil[motor] > coil_threshold) {
-            coil_high[motor] = true;
-            change_after_delay[motor] = true;
-            int32_t new_interval = (now_ticks - last_zero_ticks[motor]) << 16;
-            state_change_interval[motor] = (state_change_interval[motor] * 255 + new_interval + 128) >> 8;
-            last_zero_ticks[motor] = now_ticks;
-        }
-    //}
-
-    if (target_duty_cycle[motor] > 0 && motor_ehz[motor] > 0 && sync_done[motor]) {
-        if (change_after_delay[motor]) {// && (now_ticks - last_zero_ticks[motor]) > state_change_interval[motor] >> 17) {
+    if (target_duty_cycle > 0 && motor_ehz > 0 && sync_done) {
+        if (change_after_delay) {// && (now_ticks - last_zero_ticks) > state_change_interval >> 17) {
             should_advance_state = true;
-            change_after_delay[motor] = false;
+            change_after_delay = false;
         }
     } else {
-        if (!align_started[motor]) {
-            align_started[motor] = true;
-            align_start_ticks[motor] = now_ticks;
+        if (!align_started) {
+            align_started = true;
+            align_start_ticks = now_ticks;
 
-            motor_state[motor] = 0;
-            target_duty_cycle[motor] = SYNC_DUTY_BY_3EHZ[0];
-            update_motor_state(motor);
+            motor_state = 0;
+            target_duty_cycle = SYNC_DUTY_BY_3EHZ[0];
+            update_motor_state();
 
-            last_transition_ticks[motor] = now_ticks;
-            motor_count[motor] = 0;
-        } else if (!align_done[motor]) {
-            if (now_ticks - align_start_ticks[motor] > ALIGN_STEP_TICKS) {
-                align_done[motor] = true;
-                //target_duty_cycle[motor] = 0;
-                //user_duty_cycle[motor] = 0;
-                sync_start_ticks[motor] = now_ticks;
-                motor_min_ehz[motor] = SYNCHRONOUS_EHZ_START;
-                target_duty_cycle[motor] = SYNC_DUTY_BY_3EHZ[0];
+            last_transition_ticks = now_ticks;
+            motor_count = 0;
+        } else if (!align_done) {
+            if (now_ticks - align_start_ticks > ALIGN_STEP_TICKS) {
+                align_done = true;
+                //target_duty_cycle = 0;
+                //user_duty_cycle = 0;
+                sync_start_ticks = now_ticks;
+                motor_min_ehz = SYNCHRONOUS_EHZ_START;
+                target_duty_cycle = SYNC_DUTY_BY_3EHZ[0];
             }
         } else {
-            uint32_t step_ticks = (motor_min_ehz[motor] == SYNCHRONOUS_EHZ_START) ? SYNCHRONOUS_FIRST_STEP_TICKS : SYNCHRONOUS_STEP_TICKS;
-            if (now_ticks - sync_start_ticks[motor] > step_ticks) {
-                if (motor_ehz[motor] >= SYNCHRONOUS_EHZ_END) {
-                    sync_done[motor] = true;
-                    motor_min_ehz[motor] = SYNCHRONOUS_EHZ_START;
+            uint32_t step_ticks = (motor_min_ehz == SYNCHRONOUS_EHZ_START) ? SYNCHRONOUS_FIRST_STEP_TICKS : SYNCHRONOUS_STEP_TICKS;
+            if (now_ticks - sync_start_ticks > step_ticks) {
+                if (motor_ehz >= SYNCHRONOUS_EHZ_END) {
+                    sync_done = true;
+                    motor_min_ehz = SYNCHRONOUS_EHZ_START;
                 } else {
-                    motor_min_ehz[motor] = motor_min_ehz[motor] + 1;
-                    uint8_t idx = motor_min_ehz[motor] / 3;
+                    motor_min_ehz = motor_min_ehz + 1;
+                    uint8_t idx = motor_min_ehz / 3;
                     if (idx >= SYNC_DUTY_N) {
                         idx = SYNC_DUTY_N - 1;
                     }
-                    target_duty_cycle[motor] = SYNC_DUTY_BY_3EHZ[idx];
-                    sync_start_ticks[motor] = now_ticks;
+                    target_duty_cycle = SYNC_DUTY_BY_3EHZ[idx];
+                    sync_start_ticks = now_ticks;
                 }
             }
         }
     }
 
-    if (motor_min_ehz[motor]) {
-        uint16_t ticks_per_transition = PWM_FREQ / motor_min_ehz[motor] / 6;
-        if ((now_ticks - last_transition_ticks[motor]) >= ticks_per_transition) {
+    if (motor_min_ehz) {
+        uint16_t ticks_per_transition = PWM_FREQ / motor_min_ehz / 6;
+        if ((now_ticks - last_transition_ticks) >= ticks_per_transition) {
             should_advance_state = true;
         }
     }
 
     if (should_advance_state) {
-        motor_state[motor] = (motor_state[motor] + 1) % 6;
-        update_motor_state(motor);
+        motor_state = (motor_state + 1) % 6;
+        update_motor_state();
 
-        last_transition_ticks[motor] = now_ticks;
-        motor_count[motor]++;
+        last_transition_ticks = now_ticks;
+        motor_count++;
     }
 
-    if ((now_ticks - last_hz_ticks[motor]) >= PWM_FREQ / HZ_MEASUREMENT_HZ) {
-        uint32_t new_ehz = (motor_count[motor] * HZ_MEASUREMENT_HZ + 3) / 6;
-        motor_ehz[motor] = new_ehz;
-        motor_count[motor] = 0;
-        last_hz_ticks[motor] = now_ticks;
-        if (sync_done[motor]) {
-            //motor_min_hz[motor] = (motor_hz[motor] * 15) >> 4;
-            if (motor_min_ehz[motor] < SYNCHRONOUS_EHZ_START) {
-                motor_min_ehz[motor] = SYNCHRONOUS_EHZ_START;
+    if ((now_ticks - last_hz_ticks) >= PWM_FREQ / HZ_MEASUREMENT_HZ) {
+        uint32_t new_ehz = (motor_count * HZ_MEASUREMENT_HZ + 3) / 6;
+        motor_ehz = new_ehz;
+        motor_count = 0;
+        last_hz_ticks = now_ticks;
+        if (sync_done) {
+            //motor_min_hz = (motor_hz * 15) >> 4;
+            if (motor_min_ehz < SYNCHRONOUS_EHZ_START) {
+                motor_min_ehz = SYNCHRONOUS_EHZ_START;
             }
         }
     }
@@ -850,14 +671,11 @@ int main() {
     while (1) {
         volatile uint16_t update_rate = (uint64_t)update_count * PWM_FREQ / ticks_pwm_cycles;
 
-        motor_current[0] = motor_current_raw[0] >> 16;
-        motor_current[1] = motor_current_raw[1] >> 16;
+        motor_current = motor_current_raw >> 16;
 
-        update_motor(1);
-        update_motor(0);
+        update_motor();
 
-        adc_motor0_float_coil = MOTOR0_STATE_TO_FLOATING_ADC[motor_state[0]];
-        adc_motor1_float_coil = MOTOR1_STATE_TO_FLOATING_ADC[motor_state[1]];
+        adc_motor0_float_coil = MOTOR0_STATE_TO_FLOATING_ADC[motor_state];
         update_count++;
     }
     return 0;
