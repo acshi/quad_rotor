@@ -2,15 +2,15 @@
 
 #include <Wire.h>
 
-#define MOTOR1_MASK (1 << 6) // indicates to target motor1/second motor instead of motor0.
 #define SET_DUTY_MSG 1
 #define READ_DUTY_MSG 2
 #define READ_MEASURED_HZ_MSG 3
 #define SET_CURRENT_LIMIT_MSG 4
 #define READ_CURRENT_LIMIT_MSG 5
 #define READ_MEASURED_CURRENT_MSG 6
-#define READ_TEMPERATURE_MSG 7
-#define READ_ERROR_MSG 8
+#define READ_MEASURED_VOLTAGE_MSG 7
+#define READ_TEMPERATURE_MSG 8
+#define READ_ERROR_MSG 9
 #define DIAGNOSTIC_MSG 11
 #define ADDRESS_MSG 12
 #define MSG_END_BYTE 0xed
@@ -56,12 +56,10 @@ uint16_t sendReadMessage(uint8_t command, int address) {
   }
 
   flushTwi(address);
-
-  int motor_mask = (motor_on == 1) ? MOTOR1_MASK : 0;
   
   Wire.beginTransmission(address);
-  Wire.write(command | motor_mask);
-  Wire.write(command | motor_mask);
+  Wire.write(command);
+  Wire.write(command);
   Wire.write(MSG_END_BYTE);
   Wire.endTransmission();
 
@@ -76,12 +74,10 @@ uint16_t sendReadMessage(uint8_t command, int address) {
   }
 }
 
-void singleSendMessage(uint8_t command, int16_t value, int address) {
-  int motor_mask = (motor_on == 1) ? MOTOR1_MASK : 0;
-  
+void singleSendMessage(uint8_t command, int16_t value, int address) {  
   Wire.beginTransmission(address);
-  Wire.write(command | motor_mask);
-  Wire.write(command | motor_mask);
+  Wire.write(command);
+  Wire.write(command);
   Wire.write(MSG_END_BYTE);
   Wire.write((value >> 8) & 0xff);
   Wire.write(value & 0xff);
@@ -165,17 +161,6 @@ bool performAction(int16_t action, int address) {
         Serial << "se, set device to communicate with from those scanned\n";
         Serial << "fl, flush communcations buffers with a specific device\n";
         break;
-      case 'sm':
-        value = (uint16_t)Serial.parseInt();
-        if (value > 0) {
-          value = 1;
-        }
-        motor_on = value;
-        Serial << "Setting active motor to: " << motor_on << endl;
-        break;
-      case 'gm':
-        Serial << "Active motor is: " << motor_on << endl;
-        break;
       case 'sd':
         value = (uint16_t)Serial.parseInt();
         Serial << "Setting duty cycle target to: " << (int16_t)value << endl;
@@ -202,9 +187,13 @@ bool performAction(int16_t action, int address) {
         value = sendReadMessage(READ_MEASURED_CURRENT_MSG, address);
         Serial << "Current measurement: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
         break;
+      case 'mv':
+        value = sendReadMessage(READ_MEASURED_VOLTAGE_MSG, address);
+        Serial << "Motor voltage: " << value << " (" << (value * 6 * 2.23 / 4096) << "V)\n";
+        break;
       case 'tm':
         value = sendReadMessage(READ_TEMPERATURE_MSG, address);
-        Serial << "Temperature (celsius): " << value << endl;
+        Serial << "Temperature (celsius): " << *(int16_t*)(&value) / 10.0 << endl;
         break;
       case 'er':
         value = sendReadMessage(READ_ERROR_MSG, address);

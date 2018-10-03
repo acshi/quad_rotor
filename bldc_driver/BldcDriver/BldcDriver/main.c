@@ -98,10 +98,8 @@ struct ac_module ac_mod0;
 struct ac_module ac_mod1;
 
 volatile uint32_t motor_current_raw; // 16-bit fixed point
-uint16_t motor_current; // same units as are communicated over i2c
 volatile uint32_t motor_voltage_raw; // 16-bit fixed point
-uint16_t motor_voltage; // same units as are communicated over i2c
-volatile uint16_t temp;
+volatile uint16_t temp_raw;
 volatile uint32_t motor_ehz;
 volatile uint32_t motor_count; // state change count
 
@@ -161,10 +159,16 @@ static inline uint16_t read_analog() {
 static inline void start_aux_adc_read() {
     adc_aux_i = (adc_aux_i + 1) % 3;
     if (adc_aux_i == 0) {
+        // use 2.23V reference
+        ADC->REFCTRL.bit.REFSEL = ADC_REFERENCE_INTVCC0;
         start_analog_read(ADC_CURRENT_CHANNEL);
     } else if (adc_aux_i == 1) {
+        // use 2.23V reference
+        ADC->REFCTRL.bit.REFSEL = ADC_REFERENCE_INTVCC0;
         start_analog_read(ADC_MOTOR_V_CHANNEL);
     } else {
+        // use internal 1V reference
+        ADC->REFCTRL.bit.REFSEL = ADC_REFERENCE_INT1V;
         start_analog_read(ADC_TEMP_CHANNEL);
     }
 }
@@ -180,7 +184,7 @@ void ADC_Handler() {
             motor_voltage_raw = ((uint64_t)motor_voltage_raw * 511 + (adc_val << 16) + 256) >> 9;
             break;
         case ADC_POSITIVE_INPUT_TEMP:
-            temp = adc_val;
+            temp_raw = adc_val;
             break;
     }
 
@@ -211,6 +215,9 @@ static void configure_adc() {
     adc_conf.positive_input = MOTOR_CURRENT_ADC;
     adc_conf.resolution = ADC_RESOLUTION_12BIT;
     adc_conf.clock_source = GCLK_GENERATOR_3;
+    adc_conf.sample_length = 2;
+
+    SYSCTRL->VREF.bit.TSEN = 1; // turn on the temperature sensor
 
     adc_init(&adc_mod, ADC, &adc_conf);
     adc_enable(&adc_mod);
@@ -338,6 +345,30 @@ static void i2c_periph_write_req(struct i2c_slave_module *const module) {
     i2c_slave_read_packet_job(module, &packet);
 }
 
+static int16_t get_corrected_temperature() {
+    uint8_t *temp_cal_table = (uint8_t*)0x00806030;
+    uint8_t temp_room_int = temp_cal_table[0];
+    uint8_t temp_room_dec = temp_cal_table[1] & 0x0f;
+    uint8_t temp_hot_int = ((temp_cal_table[2] & 0x0f) << 4) | ((temp_cal_table[1] & 0xf0) >> 4);
+    uint8_t temp_hot_dec = temp_cal_table[2] & 0xf0 >> 4;
+    float int1v_room = 1.0 - 0.001 * *(int8_t*)(&temp_cal_table[3]);
+    float int1v_hot = 1.0 - 0.001 * *(int8_t*)(&temp_cal_table[4]);
+    float adc_room = ((temp_cal_table[6] & 0x0f) << 8) | temp_cal_table[5];
+    float adc_hot = (temp_cal_table[7] << 4) | ((temp_cal_table[6] & 0xf0) >> 4);
+
+    float temp_room = (float)temp_room_int + temp_room_dec * 0.1;
+    float temp_hot = (float)temp_hot_int + temp_hot_dec * 0.1;
+
+    float res = 1.0 / ((2 << 12) - 1);
+
+    float factor = (temp_hot - temp_room) / (adc_hot * int1v_hot * res - adc_room * int1v_room * res);
+    float coarse_temp = temp_room + (temp_raw * res - adc_room * int1v_room * res) * factor;
+    float int1v = int1v_room + (int1v_hot - int1v_room) * (coarse_temp - temp_room) / (temp_hot - temp_room);
+
+    float temp = temp_room + (temp_raw * int1v * res - adc_room * int1v_room * res) * factor;
+    return temp * 10;
+}
+
 // finished reading the write request, prepare the write here
 static void i2c_periph_read_complete(struct i2c_slave_module *const module) {
     // For data integrity, we demand that data bytes be repeated and that message-end and value-end bytes be present and valid
@@ -380,13 +411,13 @@ static void i2c_periph_read_complete(struct i2c_slave_module *const module) {
             set_send_reply(i2c_out_buf, current_limit);
             break;
         case READ_MEASURED_CURRENT_MSG:
-            set_send_reply(i2c_out_buf, motor_current);
+            set_send_reply(i2c_out_buf, motor_current_raw >> 16);
             break;
         case READ_MEASURED_VOLTAGE_MSG:
-            set_send_reply(i2c_out_buf, motor_voltage);
+            set_send_reply(i2c_out_buf, motor_voltage_raw >> 16);
             break;
         case READ_TEMPERATURE_MSG:
-            set_send_reply(i2c_out_buf, temp);
+            set_send_reply(i2c_out_buf, get_corrected_temperature());
             break;
         case READ_ERROR_MSG:
             set_send_reply(i2c_out_buf, 0);
@@ -487,12 +518,13 @@ static void configure_pwm() {
     config.counter.clock_prescaler = TCC_CLOCK_PRESCALER_DIV1;
     config.counter.period = PWM_PERIOD;
     config.wave.wave_generation = TCC_WAVE_GENERATION_SINGLE_SLOPE_PWM;
-    
+
     //config.double_buffering_enabled = true;
     tcc_init(&tcc_mod, TCC0, &config);
+    TCC0->WEXCTRL.bit.OTMX = 1; // assigns output of control 0 to HA, HB, and HC
+    // output matrix (OTMX) must be set before enabling
     tcc_enable(&tcc_mod);
 
-    TCC0->WEXCTRL.bit.OTMX = 1; // assigns output of control 0 to HA, HB, and HC
     // we override 2 of these at all times to be held low, with the "pattern generation"
     // and using a fixed pattern of "low"
     TCC0->PATT.reg = 0;
@@ -526,6 +558,7 @@ static void update_motor_state() {
 }
 
 static void update_motor() {
+    uint16_t motor_current = motor_current_raw >> 16;
     if ((user_duty_cycle == 0 || current_limit == 0) && (!sync_done || target_duty_cycle <= MIN_DUTY_CYCLE || motor_current < MIN_MOTOR_CURRENT)) {
         // turn off all the outputs
         target_duty_cycle = 0;
@@ -636,6 +669,11 @@ static void update_motor() {
     }
 }
 
+ISR(HardFault_Handler) {
+    while (1) {
+    }
+}
+
 int main() {
     system_init();
 
@@ -648,8 +686,6 @@ int main() {
     volatile uint32_t update_count = 0;
     while (1) {
         volatile uint16_t update_rate = (uint64_t)update_count * PWM_FREQ / ticks_pwm_cycles;
-        motor_current = motor_current_raw >> 16;
-        motor_voltage = motor_voltage_raw >> 16;
         update_motor();
         update_count++;
     }
