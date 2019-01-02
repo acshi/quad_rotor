@@ -1,5 +1,4 @@
 EESchema Schematic File Version 4
-LIBS:bldc_driver-cache
 EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
@@ -104,15 +103,15 @@ Use 0.46mm solder!\n262-265C (510F) for rework to not damage pads\nelectrolube f
 Text Label 3950 1050 2    60   ~ 0
 +V_MOTOR
 $Comp
-L conn:CONN_01X04 J1
+L Connector:Conn_01x04_Male J1
 U 1 1 5A47CBA3
-P 3550 2200
-F 0 "J1" H 3550 2450 50  0000 C CNN
-F 1 "I2C 1" V 3650 2200 50  0000 C CNN
-F 2 "Pin_Headers:Pin_Header_Straight_1x04_Pitch2.54mm" H 3550 2200 50  0001 C CNN
-F 3 "" H 3550 2200 50  0001 C CNN
-	1    3550 2200
-	-1   0    0    -1  
+P 3550 2150
+F 0 "J1" H 3550 2400 50  0000 C CNN
+F 1 "I2C 1" V 3450 2150 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 3550 2150 50  0001 C CNN
+F 3 "" H 3550 2150 50  0001 C CNN
+	1    3550 2150
+	1    0    0    -1  
 $EndComp
 $Sheet
 S 6250 4050 1200 1400

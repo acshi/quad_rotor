@@ -1,5 +1,4 @@
 EESchema Schematic File Version 4
-LIBS:bldc_driver-cache
 EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
@@ -100,9 +99,9 @@ $EndComp
 Wire Wire Line
 	3700 5250 3750 5250
 Wire Wire Line
-	1700 5400 1700 5700
+	1700 5400 1700 5550
 Wire Wire Line
-	3400 5450 3400 5650
+	3400 5450 3400 5550
 Wire Wire Line
 	1700 5000 1700 4950
 Wire Wire Line
@@ -110,13 +109,13 @@ Wire Wire Line
 Wire Wire Line
 	1700 6100 1700 6150
 Wire Wire Line
-	3400 6050 3400 6300
+	3400 6050 3400 6150
 Wire Wire Line
 	1350 5200 1400 5200
 Wire Wire Line
 	1350 5900 1400 5900
 Wire Wire Line
-	7950 4000 9400 4000
+	7950 4000 9350 4000
 Text Label 3400 4800 2    60   ~ 0
 +V_MOTOR
 $Comp
@@ -176,7 +175,7 @@ MOT_C
 Wire Wire Line
 	5000 5150 5050 5150
 Wire Wire Line
-	4700 5350 4700 5700
+	4700 5350 4700 5550
 Wire Wire Line
 	5000 5900 5050 5900
 Connection ~ 3400 4950
@@ -184,7 +183,7 @@ Connection ~ 3400 6150
 Wire Wire Line
 	4700 6150 4700 6100
 Wire Wire Line
-	1700 6150 4700 6150
+	1700 6150 2150 6150
 Text HLabel 1500 1300 0    60   Input ~ 0
 +V_MOTOR
 Wire Wire Line
@@ -224,19 +223,19 @@ Wire Wire Line
 Text HLabel 1500 3350 0    60   Output ~ 0
 MOTOR_A
 Wire Wire Line
-	1500 3350 2100 3350
+	1500 3350 1650 3350
 Text Label 2100 3350 0    60   ~ 0
 MOT_SENSE_A
 Text HLabel 1500 3550 0    60   Output ~ 0
 MOTOR_B
 Wire Wire Line
-	1500 3550 2100 3550
+	1500 3550 1850 3550
 Text Label 2100 3550 0    60   ~ 0
 MOT_SENSE_B
 Text HLabel 1500 3750 0    60   Output ~ 0
 MOTOR_C
 Wire Wire Line
-	1500 3750 2100 3750
+	1500 3750 2050 3750
 Text Label 2100 3750 0    60   ~ 0
 MOT_SENSE_C
 Text Label 1650 2300 0    60   ~ 0
@@ -430,7 +429,7 @@ Wire Wire Line
 	4300 5600 4300 5550
 Connection ~ 4700 5550
 Wire Wire Line
-	1700 4950 4700 4950
+	1700 4950 2400 4950
 $Comp
 L Device:D_Schottky D4
 U 1 1 5B476737
@@ -542,16 +541,16 @@ Wire Wire Line
 Wire Wire Line
 	6900 3550 6900 3800
 Wire Wire Line
-	6800 3800 6950 3800
+	6800 3800 6900 3800
 Wire Wire Line
-	9700 4000 9800 4000
+	9700 4000 9750 4000
 Wire Wire Line
 	9750 4000 9750 3800
 Wire Wire Line
 	9750 3800 10350 3800
 Connection ~ 9750 4000
 Wire Wire Line
-	7950 3800 8600 3800
+	7950 3800 8000 3800
 Wire Wire Line
 	9350 3800 9350 4000
 Connection ~ 9350 4000
@@ -572,7 +571,7 @@ F 4 "50V" V 8700 3950 60  0000 C CNN "Voltage"
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	7950 4300 9400 4300
+	7950 4300 9350 4300
 $Comp
 L Device:R R24
 U 1 1 5B6F5BBF
@@ -607,7 +606,7 @@ F 3 "" H 10750 4300 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	10350 4300 10750 4300
+	10350 4300 10650 4300
 Text Label 9750 4250 0    60   ~ 0
 MOT_SENSE_B
 $Comp
@@ -649,10 +648,10 @@ F 3 "" H 9150 4100 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	9700 4300 10050 4300
+	9700 4300 9750 4300
 Connection ~ 9750 4300
 Wire Wire Line
-	7950 4100 8600 4100
+	7950 4100 8050 4100
 Wire Wire Line
 	8900 4100 9000 4100
 Wire Wire Line
@@ -667,9 +666,7 @@ Wire Wire Line
 Wire Wire Line
 	10650 4150 10650 4300
 Wire Wire Line
-	10100 4000 10750 4000
-Wire Wire Line
-	10650 3800 10650 3800
+	10100 4000 10650 4000
 Wire Wire Line
 	10650 3800 10650 4000
 Connection ~ 10650 4000
@@ -705,7 +702,7 @@ F 4 "50V" V 8700 4250 60  0000 C CNN "Voltage"
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	7950 4600 9400 4600
+	7950 4600 9350 4600
 $Comp
 L Device:R R25
 U 1 1 5B6FA589
@@ -740,7 +737,7 @@ F 3 "" H 10750 4600 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
-	10350 4600 10750 4600
+	10350 4600 10650 4600
 Text Label 9750 4550 0    60   ~ 0
 MOT_SENSE_C
 $Comp
@@ -782,10 +779,10 @@ F 3 "" H 9150 4400 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	9700 4600 10050 4600
+	9700 4600 9750 4600
 Connection ~ 9750 4600
 Wire Wire Line
-	7950 4400 8600 4400
+	7950 4400 8100 4400
 Wire Wire Line
 	8900 4400 9000 4400
 Wire Wire Line
@@ -805,9 +802,9 @@ Connection ~ 6900 3800
 Text Label 7550 2750 2    60   ~ 0
 +V_MOTOR
 Wire Wire Line
-	7550 2750 7650 2750
+	7550 2750 7600 2750
 Wire Wire Line
-	7600 2750 7600 3350
+	7600 2750 7600 3050
 Wire Wire Line
 	7600 3050 7650 3050
 Connection ~ 7600 2750
@@ -889,7 +886,7 @@ Wire Wire Line
 Text Label 6850 5000 2    60   ~ 0
 MOTOR_SHUNT
 Wire Wire Line
-	6850 5000 6950 5000
+	6850 5000 6900 5000
 $Comp
 L power:GND #PWR019
 U 1 1 5B6FEB51
@@ -902,7 +899,7 @@ F 3 "" H 6200 4900 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	6200 4900 6950 4900
+	6200 4900 6250 4900
 $Comp
 L power:GND #PWR020
 U 1 1 5B6FF636
@@ -937,9 +934,9 @@ F 3 "" H 3750 2450 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	3750 2550 4350 2550
+	3750 2550 3800 2550
 Wire Wire Line
-	3900 2450 4350 2450
+	3900 2450 4100 2450
 Wire Wire Line
 	3550 2450 3600 2450
 Wire Wire Line
@@ -957,9 +954,9 @@ F 4 "25V" V 4100 2900 60  0000 C CNN "Voltage"
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	3800 2550 3800 3200
+	3800 2550 3800 2900
 Wire Wire Line
-	4100 2450 4100 3200
+	4100 2450 4100 2900
 Connection ~ 4100 2450
 Connection ~ 3800 2550
 $Comp
@@ -979,7 +976,7 @@ Connection ~ 4100 2900
 Text Notes 4200 3050 0    47   ~ 0
 10R and 2uF makes for  approx. 8kHz. cutoff.\n10R is the max resistance to limit added input error.
 Wire Wire Line
-	3400 4800 3400 5050
+	3400 4800 3400 4950
 Text Notes 3150 1850 0    60   ~ 0
 B/C versions are safer against transients
 $Comp
@@ -1113,7 +1110,7 @@ Connection ~ 2050 3750
 Wire Wire Line
 	1650 4100 1650 4250
 Wire Wire Line
-	1500 4250 2050 4250
+	1500 4250 1650 4250
 Wire Wire Line
 	1850 4250 1850 4100
 Connection ~ 1650 4250
@@ -1169,4 +1166,156 @@ Wire Wire Line
 	6900 3250 6700 3250
 Wire Wire Line
 	6700 3550 6900 3550
+Wire Wire Line
+	3400 4950 4700 4950
+Wire Wire Line
+	3400 4950 3400 5050
+Wire Wire Line
+	3400 6150 3400 6300
+Wire Wire Line
+	3400 6150 4300 6150
+Wire Wire Line
+	2400 4950 3400 4950
+Wire Wire Line
+	2400 6150 3000 6150
+Wire Wire Line
+	4300 6150 4700 6150
+Wire Wire Line
+	4700 5550 4700 5700
+Wire Wire Line
+	3000 6150 3400 6150
+Wire Wire Line
+	3400 5550 3400 5650
+Wire Wire Line
+	1700 5550 1700 5700
+Wire Wire Line
+	2150 6150 2400 6150
+Wire Wire Line
+	9750 4000 9800 4000
+Wire Wire Line
+	9350 4000 9400 4000
+Wire Wire Line
+	10650 4300 10750 4300
+Wire Wire Line
+	9750 4300 10050 4300
+Wire Wire Line
+	9350 4300 9400 4300
+Wire Wire Line
+	10650 4000 10750 4000
+Wire Wire Line
+	10650 4600 10750 4600
+Wire Wire Line
+	9750 4600 10050 4600
+Wire Wire Line
+	9350 4600 9400 4600
+Wire Wire Line
+	6900 3800 6950 3800
+Wire Wire Line
+	7600 2750 7650 2750
+Wire Wire Line
+	7600 3050 7600 3350
+Wire Wire Line
+	8000 3800 8600 3800
+Wire Wire Line
+	8050 4100 8600 4100
+Wire Wire Line
+	8100 4400 8600 4400
+Wire Wire Line
+	4100 2450 4350 2450
+Wire Wire Line
+	3800 2550 4350 2550
+Wire Wire Line
+	3800 2900 3800 3200
+Wire Wire Line
+	4100 2900 4100 3200
+Wire Wire Line
+	6900 5000 6950 5000
+Wire Wire Line
+	6250 4900 6950 4900
+Wire Wire Line
+	1650 4250 1850 4250
+Wire Wire Line
+	1850 4250 2050 4250
+$Comp
+L Device:D_Schottky_x2_Serial_AKC D10
+U 1 1 5C2CE5B6
+P 2800 3950
+F 0 "D10" H 2800 4074 50  0000 C CNN
+F 1 "BAS40" H 2450 3900 50  0000 C CNN
+F 2 "Package_TO_SOT_SMD:SOT-23_Handsoldering" H 2800 3950 50  0001 C CNN
+F 3 "~" H 2800 3950 50  0001 C CNN
+	1    2800 3950
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:D_Schottky_x2_Serial_AKC D11
+U 1 1 5C2CE91E
+P 3050 4200
+F 0 "D11" H 3050 4324 50  0000 C CNN
+F 1 "BAS40" H 2950 4150 50  0000 C CNN
+F 2 "Package_TO_SOT_SMD:SOT-23_Handsoldering" H 3050 4200 50  0001 C CNN
+F 3 "~" H 3050 4200 50  0001 C CNN
+	1    3050 4200
+	-1   0    0    1   
+$EndComp
+$Comp
+L Device:D_Schottky_x2_Serial_AKC D12
+U 1 1 5C2CEAA3
+P 3300 4450
+F 0 "D12" H 3300 4574 50  0000 C CNN
+F 1 "BAS40" H 3450 4400 50  0000 C CNN
+F 2 "Package_TO_SOT_SMD:SOT-23_Handsoldering" H 3300 4450 50  0001 C CNN
+F 3 "~" H 3300 4450 50  0001 C CNN
+	1    3300 4450
+	-1   0    0    1   
+$EndComp
+Text Label 2350 4200 2    60   ~ 0
++3.3V
+$Comp
+L power:GND #PWR0101
+U 1 1 5C2E3B95
+P 3700 4200
+F 0 "#PWR0101" H 3700 3950 50  0001 C CNN
+F 1 "GND" V 3705 4072 50  0000 R CNN
+F 2 "" H 3700 4200 50  0001 C CNN
+F 3 "" H 3700 4200 50  0001 C CNN
+	1    3700 4200
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	3700 4200 3650 4200
+Wire Wire Line
+	3600 4450 3650 4450
+Wire Wire Line
+	3650 4450 3650 4200
+Connection ~ 3650 4200
+Wire Wire Line
+	3650 4200 3350 4200
+Wire Wire Line
+	3100 3950 3650 3950
+Wire Wire Line
+	3650 3950 3650 4200
+Wire Wire Line
+	2350 4200 2450 4200
+Wire Wire Line
+	2500 3950 2450 3950
+Wire Wire Line
+	2450 3950 2450 4200
+Connection ~ 2450 4200
+Wire Wire Line
+	2450 4200 2750 4200
+Wire Wire Line
+	2450 4200 2450 4450
+Wire Wire Line
+	2450 4450 3000 4450
+Wire Wire Line
+	2050 3750 2800 3750
+Wire Wire Line
+	3050 3550 3050 4000
+Wire Wire Line
+	1850 3550 3050 3550
+Wire Wire Line
+	3300 3350 3300 4250
+Wire Wire Line
+	1650 3350 3300 3350
 $EndSCHEMATC
