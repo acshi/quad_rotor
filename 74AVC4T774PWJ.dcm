@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP 74AVC4T774PWJ
+D Voltage Level Translator Bidirectional 1 Circuit 4 Channel 380Mbps
+K Voltage Level Translator Bidirectional
+F https://assets.nexperia.com/documents/data-sheet/74AVC4T774PW.pdf
+$ENDCMP
+#
+#End Doc Library
