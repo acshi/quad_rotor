@@ -31,6 +31,8 @@
 #define SYNCHRONOUS_STEP_SEC 0.03
 #define SYNCHRONOUS_STEP_TICKS (PWM_FREQ * SYNCHRONOUS_STEP_SEC)
 
+#define MOTOR_RUNNING_CURRENT_THRESH 50
+
 // Alignment of motor phases for start up
 #define ALIGN_STEP_SEC 0.2 // seconds to assert an alignment step
 #define ALIGN_STEP_TICKS (PWM_FREQ * ALIGN_STEP_SEC)
@@ -54,6 +56,8 @@
 #define MOTOR_COMP_POS_C AC_CHAN_POS_MUX_PIN0
 #define MOTOR_COMP_NEG_C AC_CHAN_NEG_MUX_PIN1
 
+#define MOTOR_ENABLE_PIN PIN_PA18
+#define MOTOR_ENABLE (1 << MOTOR_ENABLE_PIN)
 #define MOTOR_HA PIN_PA08
 #define MOTOR_LA PIN_PA09
 #define MOTOR_HB PIN_PA10
@@ -97,11 +101,11 @@ uint8_t adc_aux_i = 0;
 struct ac_module ac_mod0;
 struct ac_module ac_mod1;
 
-volatile uint32_t motor_current_raw; // 16-bit fixed point
-volatile uint32_t motor_voltage_raw; // 16-bit fixed point
-volatile uint16_t temp_raw;
-volatile uint32_t motor_ehz;
-volatile uint32_t motor_count; // state change count
+volatile uint32_t motor_current_raw = 0; // 16-bit fixed point
+volatile uint32_t motor_voltage_raw = 0; // 16-bit fixed point
+volatile uint16_t temp_raw = 0;
+volatile uint32_t motor_ehz = 0;
+volatile uint32_t motor_count = 0; // state change count
 
 #define COIL_BUFFER_N 1024
 int16_t debug_buffer[COIL_BUFFER_N] = { 0 };
@@ -477,6 +481,7 @@ static void configure_gpio_mux() {
     config.direction = SYSTEM_PINMUX_PIN_DIR_OUTPUT_WITH_READBACK;
 
     system_pinmux_pin_set_config(MOTOR_STATUS_PIN, &config);
+    system_pinmux_pin_set_config(MOTOR_ENABLE_PIN, &config);
 
     // the low enables are either on or off, pwm is only given to the high enables
     system_pinmux_pin_set_config(MOTOR_LA, &config);
@@ -490,9 +495,12 @@ void TCC0_Handler() {
         ticks_pwm_cycles++;
     }
     // counter match 1 for updating motor state
-    if (intflag.bit.MC1) {
-        update_motor_state();
-    }
+    //if (intflag.bit.MC0) {
+        //update_motor_state();
+    //}
+    //if (intflag.bit.MC1) {
+        //update_motor_state();
+    //}
     TCC0->INTFLAG.reg = intflag.reg; // clear all bits
 }
 
@@ -501,10 +509,10 @@ static void configure_pwm_mux() {
     system_pinmux_get_config_defaults(&config);
 
     config.input_pull = SYSTEM_PINMUX_PIN_PULL_NONE;
-    config.mux_position = 8; // E
+    config.mux_position = 4; // E
     system_pinmux_pin_set_config(MOTOR_HA, &config);
 
-    config.mux_position = 16; // F
+    config.mux_position = 5; // F
     system_pinmux_pin_set_config(MOTOR_HB, &config);
     system_pinmux_pin_set_config(MOTOR_HC, &config);
 }
@@ -532,9 +540,10 @@ static void configure_pwm() {
 
     // enable interrupts for compare match on channels 0, 1, and overflow/reset
     TCC0->INTENSET.bit.OVF = 1;
+    TCC0->INTENSET.bit.MC0 = 1;
     //TCC0->INTENSET.bit.MC1 = 1;
 
-    //NVIC_EnableIRQ(TCC0_IRQn);
+    NVIC_EnableIRQ(TCC0_IRQn);
 
     // start up these comparisons, as the compare values update in the interrupt handler
     //target_current[0] = 1000;
@@ -545,8 +554,8 @@ static void configure_pwm() {
 static void update_motor_state() {
     if (target_duty_cycle == 0) {
         // turn everything off
+        PORT->Group[0].OUTCLR.reg = MOTOR_ENABLE | LOW_GATES_ALL;
         TCC0->PATT.vec.PGE = PWM_GATES_ALL;
-        PORT->Group[0].OUTCLR.reg = LOW_GATES_ALL;
         return;
     }
 
@@ -554,7 +563,7 @@ static void update_motor_state() {
     // update which output (of HA, HB, HC) the pwm is directed to
     TCC0->PATT.vec.PGE = STATE_TO_PWM_ENABLE[motor_state];
     PORT->Group[0].OUTCLR.reg = LOW_GATES_ALL;
-    PORT->Group[0].OUTSET.reg = STATE_TO_LOW_GATE_ENABLE[motor_state];
+    PORT->Group[0].OUTSET.reg = MOTOR_ENABLE | STATE_TO_LOW_GATE_ENABLE[motor_state];
 }
 
 static void update_motor() {
@@ -640,7 +649,9 @@ static void update_motor() {
             if (motor_ehz >= SYNCHRONOUS_EHZ_END) {
                 sync_done = true;
                 motor_min_ehz = SYNCHRONOUS_EHZ_START;
-            } else {
+            } else if ((motor_current_raw >> 16) > MOTOR_RUNNING_CURRENT_THRESH) {
+                // condition above to make sure the motor has started turning
+                // otherwise we stay in slow synchronous state for debugging
                 motor_min_ehz = motor_min_ehz + 1;
                 uint8_t idx = motor_min_ehz / 3;
                 if (idx >= SYNC_DUTY_N) {

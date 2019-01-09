@@ -154,7 +154,8 @@ bool performAction(int16_t action, int address) {
         Serial << "sd, gd, (set/get) duty cycle target\n";
         Serial << "mh, measured hz target\n";
         Serial << "sc, gc, mc, (set/get/measured) current target\n";
-        Serial << "tm, temperature\n";
+        Serial << "mv, measured motor voltage\n";
+        Serial << "mt, measured temperature\n";
         Serial << "er, check for error conditions\n";
         Serial << "tw, return TWI address of device\n";
         Serial << "sa, scan addresses for connected TWI devices\n";
@@ -191,7 +192,7 @@ bool performAction(int16_t action, int address) {
         value = sendReadMessage(READ_MEASURED_VOLTAGE_MSG, address);
         Serial << "Motor voltage: " << value << " (" << (value * 6 * 2.23 / 4096) << "V)\n";
         break;
-      case 'tm':
+      case 'mt':
         value = sendReadMessage(READ_TEMPERATURE_MSG, address);
         Serial << "Temperature (celsius): " << *(int16_t*)(&value) / 10.0 << endl;
         break;
