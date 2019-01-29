@@ -1,5 +1,5 @@
+#include <Metro.h>
 #include <Streaming.h>
-
 #include <Wire.h>
 
 #define SET_DUTY_MSG 1
@@ -13,6 +13,7 @@
 #define READ_ERROR_MSG 9
 #define DIAGNOSTIC_MSG 11
 #define ADDRESS_MSG 12
+#define PHASE_STATE_MSG 13
 #define MSG_END_BYTE 0xed
 #define VAL_END_BYTE 0xec
 
@@ -252,6 +253,11 @@ bool performAction(int16_t action, int address) {
 }
 
 void loop() {
+  static Metro phase_print(200);
+  if (phase_print.check()) {
+    Serial << "Phase: " << sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
+  }
+  
   static int32_t lastSentMicros;
   static byte byte0 = 0;
   static byte byte1 = 0;

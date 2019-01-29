@@ -30,21 +30,26 @@ module slot(l, d, h, center_x=false, center_y=false) {
 }
 
 module arm() {
-    bulb_d = 32;
+    bulb_d = 30;
     arm_w = 14;
-    mount_t = 5;
-    arm_t = 10;
-    m_d = 16.6; // distance between mounting holes
-    m_o = (bulb_d - m_d) / 2; // offset from edge for mounting holes
+    arm_t = 12;
+    base_w = arm_w-arm_t/2;
+    mount_t = arm_t;
+    m_d1 = 16.6; // distance between closer together motor mounting holes
+    m_d2 = 19; // and between the farther apart ones
+    m_o = (bulb_d - m_d1) / 2; // offset from edge for mounting holes
     m_hole_d = 8; // center hole diameter
-    cham_r = 5;
-    arm_l = 180;
+    arm_l = 200;
     connect_d = 24;
     bm_d = 12; // distance between body mounting holes
     inner1_arm_l = arm_l - bulb_d/2 - connect_d/2;
     inner2_arm_l = arm_l - bulb_d - connect_d;
-    screw_hole_d = 5;
-    screwhead_hole_d = 7.5;
+    screw_hole_d = 4.5;
+    screwhead_hole_d = 6.5;
+    foot_t = 15;
+    foot_base = base_w*2;
+    foot_top = 10;
+    foot_offset = 15;
     difference() {
         //cube([140, arm_w, mount_t]);
         union() {
@@ -70,9 +75,8 @@ module arm() {
                     }
                 }
                 // rectangularish version
-                translate([(bulb_d-2)*0, (-arm_w/2+cham_r)*0, arm_t/2*0]) rotate([0, 90, 0]) {
+                rotate([0, 90, 0]) {
                     linear_extrude(height = arm_l) {
-                        base_w = arm_w-arm_t/2;
                         polygon([[0, base_w], [-(arm_w-base_w), arm_w],
                                  [-(arm_w-base_w)*2, base_w], [-(arm_w-base_w)*2, -base_w],
                                  [-(arm_w-base_w), -arm_w], [0, -base_w]]);
@@ -82,26 +86,33 @@ module arm() {
             // body connecting mount area
             translate([arm_l-connect_d/2, 0, 0])
                 cylinder(d=connect_d, h=mount_t);
+            // landing feet (foot)
+            translate([bulb_d+foot_offset, 0, -foot_t])
+                cylinder(h=foot_t, d2=foot_base, d1=foot_top, $fn=4);
         }
         // motor mounting holes
-        translate([m_o, 0, 0]) {
-            cylinder(d=screw_hole_d, h=mount_t);
-            translate([m_d, 0, 0])
-                cylinder(d=screw_hole_d, h=mount_t);
-            translate([m_d/2, -m_d/2, 0])
-                cylinder(d=screw_hole_d, h=mount_t);
-            translate([m_d/2, m_d/2, 0])
-                cylinder(d=screw_hole_d, h=mount_t);
-            translate([m_d/2, 0, 0])
-                cylinder(d=m_hole_d, h=mount_t);
-            // hole to allow screw head to come through part way
-            cylinder(d=screwhead_hole_d, h=mount_t-2.5);
-            translate([m_d, 0, 0])
-                cylinder(d=screwhead_hole_d, h=mount_t-2.5);
-            translate([m_d/2, -m_d/2, 0])
-                cylinder(d=screwhead_hole_d, h=mount_t-2.5);
-            translate([m_d/2, m_d/2, 0])
-                cylinder(d=screwhead_hole_d, h=mount_t-2.5);
+        #translate([bulb_d/2, 0, 0]) {
+            rotate([0, 0, 45]) {
+                translate([-m_d2/2, 0, 0])
+                    cylinder(d=screw_hole_d, h=mount_t);
+                translate([m_d2/2, 0, 0])
+                    cylinder(d=screw_hole_d, h=mount_t);
+                translate([0, -m_d1/2, 0])
+                    cylinder(d=screw_hole_d, h=mount_t);
+                translate([0, m_d1/2, 0])
+                    cylinder(d=screw_hole_d, h=mount_t);
+                translate([0, 0, 0])
+                    cylinder(d=m_hole_d, h=mount_t);
+                // hole to allow screw head to come through part way
+                translate([-m_d2/2, 0, 0])
+                    cylinder(d=screwhead_hole_d, h=mount_t-2.5);
+                translate([m_d2/2, 0, 0])
+                    cylinder(d=screwhead_hole_d, h=mount_t-2.5);
+                translate([0, -m_d1/2, 0])
+                    cylinder(d=screwhead_hole_d, h=mount_t-2.5);
+                translate([0, m_d1/2, 0])
+                    cylinder(d=screwhead_hole_d, h=mount_t-2.5);
+            }
         }
         // body mounting holes
         translate([arm_l-connect_d/2, 0, 0]) {
@@ -113,22 +124,6 @@ module arm() {
                 cylinder(d=screw_hole_d, h=mount_t);
             translate([0, -bm_d/2, 0])
                 cylinder(d=screw_hole_d, h=mount_t);
-        }
-        
-        // strengthening holes -- small enough they add density
-        str_d = 2;
-        inner_l = arm_l - bulb_d - connect_d;
-        translate([bulb_d, 0, 0]) {
-            translate([inner_l/6*1, 0, 0])
-                cylinder(d=str_d, h=arm_t);
-            translate([inner_l/6*2, 0, 0])
-                cylinder(d=str_d, h=arm_t);
-            translate([inner_l/6*3, 0, 0])
-                cylinder(d=str_d, h=arm_t);
-            translate([inner_l/6*4, 0, 0])
-                cylinder(d=str_d, h=arm_t);
-            translate([inner_l/6*5, 0, 0])
-                cylinder(d=str_d, h=arm_t);
         }
     }
 

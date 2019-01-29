@@ -14,21 +14,21 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
-Text Label 3850 2050 0    60   ~ 0
+Text Label 3650 2050 0    60   ~ 0
 SDA
-Text Label 3850 2150 0    60   ~ 0
+Text Label 3650 2150 0    60   ~ 0
 SCL
-Text Label 3850 2250 0    60   ~ 0
+Text Label 3650 2250 0    60   ~ 0
 +3.3V
 $Comp
 L power:GND #PWR011
 U 1 1 5A459E6A
-P 3850 2350
-F 0 "#PWR011" H 3850 2100 50  0001 C CNN
-F 1 "GND" H 3850 2200 50  0000 C CNN
-F 2 "" H 3850 2350 50  0001 C CNN
-F 3 "" H 3850 2350 50  0001 C CNN
-	1    3850 2350
+P 3650 2350
+F 0 "#PWR011" H 3650 2100 50  0001 C CNN
+F 1 "GND" H 3650 2200 50  0000 C CNN
+F 2 "" H 3650 2350 50  0001 C CNN
+F 3 "" H 3650 2350 50  0001 C CNN
+	1    3650 2350
 	0    -1   -1   0   
 $EndComp
 $Comp
@@ -66,21 +66,21 @@ F 3 "" H 4850 750 50  0001 C CNN
 $EndComp
 Text Label 3950 750  2    60   ~ 0
 +5V
-Text Label 4900 2050 0    60   ~ 0
+Text Label 4350 2050 0    60   ~ 0
 SDA
-Text Label 4900 2150 0    60   ~ 0
+Text Label 4350 2150 0    60   ~ 0
 SCL
-Text Label 4900 2250 0    60   ~ 0
+Text Label 4350 2250 0    60   ~ 0
 +3.3V
 $Comp
 L power:GND #PWR015
 U 1 1 5A45CA87
-P 4900 2350
-F 0 "#PWR015" H 4900 2100 50  0001 C CNN
-F 1 "GND" H 4900 2200 50  0000 C CNN
-F 2 "" H 4900 2350 50  0001 C CNN
-F 3 "" H 4900 2350 50  0001 C CNN
-	1    4900 2350
+P 4350 2350
+F 0 "#PWR015" H 4350 2100 50  0001 C CNN
+F 1 "GND" H 4350 2200 50  0000 C CNN
+F 2 "" H 4350 2350 50  0001 C CNN
+F 3 "" H 4350 2350 50  0001 C CNN
+	1    4350 2350
 	0    -1   -1   0   
 $EndComp
 Wire Wire Line
@@ -226,41 +226,41 @@ Compare to VCC\n(as measured by 5V_READ)
 $Comp
 L Connector:Conn_01x04_Male J2
 U 1 1 5A47CBA3
-P 3550 2150
-F 0 "J2" H 3550 2400 50  0000 C CNN
-F 1 "I2C 1" V 3500 2150 50  0000 C CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 3550 2150 50  0001 C CNN
-F 3 "" H 3550 2150 50  0001 C CNN
-	1    3550 2150
+P 3350 2150
+F 0 "J2" H 3350 2400 50  0000 C CNN
+F 1 "I2C 1" V 3300 2150 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 3350 2150 50  0001 C CNN
+F 3 "" H 3350 2150 50  0001 C CNN
+	1    3350 2150
 	1    0    0    -1  
 $EndComp
 $Comp
 L Connector:Conn_01x04_Male J3
 U 1 1 5A47CC54
-P 4600 2150
-F 0 "J3" H 4600 2400 50  0000 C CNN
-F 1 "I2C 2" V 4550 2150 50  0000 C CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 4600 2150 50  0001 C CNN
-F 3 "" H 4600 2150 50  0001 C CNN
-	1    4600 2150
+P 4050 2150
+F 0 "J3" H 4050 2400 50  0000 C CNN
+F 1 "I2C 2" V 4000 2150 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 4050 2150 50  0001 C CNN
+F 3 "" H 4050 2150 50  0001 C CNN
+	1    4050 2150
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	4900 2350 4800 2350
+	4350 2350 4250 2350
 Wire Wire Line
-	4800 2250 4900 2250
+	4250 2250 4350 2250
 Wire Wire Line
-	4900 2150 4800 2150
+	4350 2150 4250 2150
 Wire Wire Line
-	4800 2050 4900 2050
+	4250 2050 4350 2050
 Wire Wire Line
-	3750 2050 3850 2050
+	3550 2050 3650 2050
 Wire Wire Line
-	3850 2150 3750 2150
+	3650 2150 3550 2150
 Wire Wire Line
-	3750 2250 3850 2250
+	3550 2250 3650 2250
 Wire Wire Line
-	3850 2350 3750 2350
+	3650 2350 3550 2350
 $Comp
 L lps25hbtr:LPS25HBTR‎ U2
 U 1 1 5B88DA5E
@@ -956,7 +956,7 @@ Wire Wire Line
 Wire Wire Line
 	7900 1750 8000 1750
 Text Label 8000 1550 0    50   ~ 0
-SCL
+SPICLK
 Text Label 8000 1750 0    50   ~ 0
 PR_SDI
 Wire Wire Line
@@ -1181,7 +1181,7 @@ IM_SDO
 Wire Wire Line
 	10550 3450 10650 3450
 Text Label 10650 3450 0    50   ~ 0
-SCL
+SPICLK
 Wire Wire Line
 	10550 3600 10650 3600
 Text Label 10650 3600 0    50   ~ 0
@@ -1201,4 +1201,100 @@ F 3 "https://assets.nexperia.com/documents/data-sheet/74AVC4T774PW.pdf" H 8950 3
 	1    10150 3600
 	1    0    0    -1  
 $EndComp
+Wire Wire Line
+	2400 3050 2300 3050
+Text Label 2300 3050 2    50   ~ 0
+IM_SDO
+Wire Wire Line
+	6900 6050 7000 6050
+Text Label 7000 6050 0    50   ~ 0
+PR_SDO
+Wire Wire Line
+	2400 3150 2300 3150
+Text Label 2300 3150 2    50   ~ 0
+IM_SDI
+Wire Wire Line
+	2400 3450 2300 3450
+Text Label 2300 3450 2    50   ~ 0
+PR_SDI
+Text Label 5050 2050 0    60   ~ 0
+SDA
+Text Label 5050 2150 0    60   ~ 0
+SCL
+Text Label 5050 2250 0    60   ~ 0
++3.3V
+$Comp
+L power:GND #PWR?
+U 1 1 5C4D845A
+P 5050 2350
+F 0 "#PWR?" H 5050 2100 50  0001 C CNN
+F 1 "GND" H 5050 2200 50  0000 C CNN
+F 2 "" H 5050 2350 50  0001 C CNN
+F 3 "" H 5050 2350 50  0001 C CNN
+	1    5050 2350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Connector:Conn_01x04_Male J?
+U 1 1 5C4D8460
+P 4750 2150
+F 0 "J?" H 4750 2400 50  0000 C CNN
+F 1 "I2C 2" V 4700 2150 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 4750 2150 50  0001 C CNN
+F 3 "" H 4750 2150 50  0001 C CNN
+	1    4750 2150
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5050 2350 4950 2350
+Wire Wire Line
+	4950 2250 5050 2250
+Wire Wire Line
+	5050 2150 4950 2150
+Wire Wire Line
+	4950 2050 5050 2050
+Text Label 5750 2050 0    60   ~ 0
+SDA
+Text Label 5750 2150 0    60   ~ 0
+SCL
+Text Label 5750 2250 0    60   ~ 0
++3.3V
+$Comp
+L power:GND #PWR?
+U 1 1 5C4EBFA6
+P 5750 2350
+F 0 "#PWR?" H 5750 2100 50  0001 C CNN
+F 1 "GND" H 5750 2200 50  0000 C CNN
+F 2 "" H 5750 2350 50  0001 C CNN
+F 3 "" H 5750 2350 50  0001 C CNN
+	1    5750 2350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L Connector:Conn_01x04_Male J?
+U 1 1 5C4EBFAC
+P 5450 2150
+F 0 "J?" H 5450 2400 50  0000 C CNN
+F 1 "I2C 2" V 5400 2150 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 5450 2150 50  0001 C CNN
+F 3 "" H 5450 2150 50  0001 C CNN
+	1    5450 2150
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5750 2350 5650 2350
+Wire Wire Line
+	5650 2250 5750 2250
+Wire Wire Line
+	5750 2150 5650 2150
+Wire Wire Line
+	5650 2050 5750 2050
+Wire Wire Line
+	6900 5050 7000 5050
+Wire Wire Line
+	6900 4950 7000 4950
+Text Label 7000 4950 0    50   ~ 0
+SDA
+Text Label 7000 5050 0    50   ~ 0
+SCK
 $EndSCHEMATC

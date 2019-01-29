@@ -356,14 +356,14 @@ Wire Wire Line
 	4600 2000 4650 2000
 Wire Wire Line
 	4950 2000 5000 2000
-Text Notes 9250 5300 0    60   ~ 0
-1/6 voltge divider.\n11.1V nominal voltage battery\nmax voltage approx. 13V\nADC 2.23V\n20k and 1nF give cutoff of approx 8kHz
+Text Notes 9550 5650 0    60   ~ 0
+1/6 voltge divider.\n11.1V nominal voltage battery\nmax voltage approx. 13V\nADC 2.23V\n20k, 4.02k, and 22nF give cutoff \nof approx 2kHz. And it is important\nthat the phase zero resistors be an\norder of magnitude greater\nor it'll through this off
 $Comp
 L Device:C C17
 U 1 1 5AF103CC
 P 10500 3800
 F 0 "C17" H 10525 3900 50  0000 L CNN
-F 1 "1nF" H 10525 3700 50  0000 L CNN
+F 1 "22nF" H 10525 3700 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 10538 3650 50  0001 C CNN
 F 3 "" H 10500 3800 50  0001 C CNN
 	1    10500 3800
@@ -615,7 +615,7 @@ L Device:C C18
 U 1 1 5B6F5BD3
 P 10500 4150
 F 0 "C18" H 10525 4250 50  0000 L CNN
-F 1 "1nF" H 10500 4050 50  0000 L CNN
+F 1 "22nF" H 10500 4050 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 10538 4000 50  0001 C CNN
 F 3 "" H 10500 4150 50  0001 C CNN
 	1    10500 4150
@@ -746,7 +746,7 @@ L Device:C C19
 U 1 1 5B6FA59E
 P 10500 4450
 F 0 "C19" H 10525 4550 50  0000 L CNN
-F 1 "1nF" H 10500 4350 50  0000 L CNN
+F 1 "22nF" H 10500 4350 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 10538 4300 50  0001 C CNN
 F 3 "" H 10500 4450 50  0001 C CNN
 	1    10500 4450
@@ -1060,7 +1060,7 @@ L Device:R R5
 U 1 1 5B7CE39B
 P 1650 3950
 F 0 "R5" V 1730 3950 50  0000 C CNN
-F 1 "3k" V 1650 3950 50  0000 C CNN
+F 1 "100k" V 1650 3950 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1580 3950 50  0001 C CNN
 F 3 "" H 1650 3950 50  0001 C CNN
 	1    1650 3950
@@ -1071,7 +1071,7 @@ L Device:R R6
 U 1 1 5B7CF3EE
 P 1850 3950
 F 0 "R6" V 1930 3950 50  0000 C CNN
-F 1 "3k" V 1850 3950 50  0000 C CNN
+F 1 "100k" V 1850 3950 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1780 3950 50  0001 C CNN
 F 3 "" H 1850 3950 50  0001 C CNN
 	1    1850 3950
@@ -1082,7 +1082,7 @@ L Device:R R8
 U 1 1 5B7CF49C
 P 2050 3950
 F 0 "R8" V 2130 3950 50  0000 C CNN
-F 1 "3k" V 2050 3950 50  0000 C CNN
+F 1 "100k" V 2050 3950 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1980 3950 50  0001 C CNN
 F 3 "" H 2050 3950 50  0001 C CNN
 	1    2050 3950

@@ -4,5 +4,5 @@
   (lib (name icm-20948)(type Legacy)(uri ${KIPRJMOD}/icm-20948.lib)(options "")(descr ""))
   (lib (name atsams70j19a)(type Legacy)(uri ${KIPRJMOD}/atsams70j19a.lib)(options "")(descr ""))
   (lib (name lps25hbtr)(type Legacy)(uri ${KIPRJMOD}/lps25hbtr.lib)(options "")(descr ""))
-  (lib (name 74AVC4T774PWJ)(type Legacy)(uri /home/acshi/quad_rotor/74AVC4T774PWJ.lib)(options "")(descr ""))
+  (lib (name 74AVC4T774PWJ)(type Legacy)(uri ${KIPRJMOD}/74AVC4T774PWJ.lib)(options "")(descr ""))
 )

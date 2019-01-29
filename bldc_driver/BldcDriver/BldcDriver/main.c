@@ -8,33 +8,39 @@
 #include <stdint.h>
 #include <asf.h>
 #include <fastmath.h>
+#include <unistd.h>
+//#include <core_cm0plus.h>
 
 #include "sam.h"
+
+#define PUTS(s) write(1, s, sizeof(s))
 
 #define CLOCK_FREQ 48000000
 #define PWM_FREQ 20000 //5600
 #define PWM_PERIOD (CLOCK_FREQ/PWM_FREQ)
 #define PWM_REST (80) // min cycles for the high side mosfet-driver charge pumps to recover
 #define MAX_DUTY_CYCLE (PWM_PERIOD - PWM_REST)
-#define MIN_DUTY_CYCLE (PWM_PERIOD / 18)
+#define MIN_DUTY_CYCLE (PWM_PERIOD / 16)
 // index-0 will be for 1hz
-#define SYNC_DUTY_N 7
-#define SYNC_DUTY_BY_3EHZ ((uint16_t[]){ PWM_PERIOD / 16, PWM_PERIOD / 15, PWM_PERIOD / 14, PWM_PERIOD / 13, PWM_PERIOD / 12, PWM_PERIOD / 11, PWM_PERIOD / 10})
+//#define SYNC_DUTY_N 7
+//#define SYNC_DUTY_BY_3EHZ ((uint16_t[]){ PWM_PERIOD / 16, PWM_PERIOD / 15, PWM_PERIOD / 14, PWM_PERIOD / 13, PWM_PERIOD / 12, PWM_PERIOD / 11, PWM_PERIOD / 10})
+#define SYNC_DUTY_N 1
+#define SYNC_DUTY_BY_3EHZ ((uint16_t[]){ PWM_PERIOD / 6})
 #define MAX_DUTY_CHANGE 50
 #define OVER_CURRENT_CHANGE 5
 
 // synchronous speed for start up
-#define SYNCHRONOUS_EHZ_START 2
-#define SYNCHRONOUS_EHZ_END 22
-#define SYNCHRONOUS_FIRST_STEP_SEC 0.1
+#define SYNCHRONOUS_EHZ_START 20 //2
+#define SYNCHRONOUS_EHZ_END 200 //22
+#define SYNCHRONOUS_FIRST_STEP_SEC 0.02
 #define SYNCHRONOUS_FIRST_STEP_TICKS (PWM_FREQ * SYNCHRONOUS_FIRST_STEP_SEC)
-#define SYNCHRONOUS_STEP_SEC 0.03
+#define SYNCHRONOUS_STEP_SEC 0.01
 #define SYNCHRONOUS_STEP_TICKS (PWM_FREQ * SYNCHRONOUS_STEP_SEC)
 
-#define MOTOR_RUNNING_CURRENT_THRESH 50
+#define MOTOR_RUNNING_CURRENT_THRESH 20
 
 // Alignment of motor phases for start up
-#define ALIGN_STEP_SEC 0.2 // seconds to assert an alignment step
+#define ALIGN_STEP_SEC 0.0 // seconds to assert an alignment step
 #define ALIGN_STEP_TICKS (PWM_FREQ * ALIGN_STEP_SEC)
 
 // rate at which speed measurement is updated
@@ -85,6 +91,7 @@
 #define READ_ERROR_MSG 9
 #define DIAGNOSTIC_MSG 11
 #define ADDRESS_MSG 12
+#define PHASE_STATE_MSG 13
 #define MSG_END_BYTE 0xed
 #define VAL_END_BYTE 0xec
 #define MSG_MARK_BYTE 0xfe
@@ -107,8 +114,9 @@ volatile uint16_t temp_raw = 0;
 volatile uint32_t motor_ehz = 0;
 volatile uint32_t motor_count = 0; // state change count
 
-#define COIL_BUFFER_N 1024
-int16_t debug_buffer[COIL_BUFFER_N] = { 0 };
+#define DEBUG_BUFFER_N 128
+int16_t debug_buffer1[DEBUG_BUFFER_N] = { 0 };
+int16_t debug_buffer2[DEBUG_BUFFER_N] = { 0 };
 uint16_t debug_buffer_i = 0;
 
 // current state of each motor, in terms of which coil is power, ground, and floating
@@ -121,7 +129,6 @@ uint16_t target_duty_cycle = 0;
 
 uint16_t motor_min_ehz = 0; // minimum hz for transitions in case we miss commutation, also for synchronous start up
 uint32_t last_transition_ticks = 0; // for timing transitions
-uint32_t last_hz_adjust_ticks = 0; // for hz pid
 uint32_t last_duty_adjust_ticks = 0; // for current pid
 uint32_t last_hz_ticks = 0; // for hz measurement
 uint32_t sync_start_ticks = 0; // synchronous starting
@@ -246,6 +253,10 @@ static void comparator_coil_a_callback(struct ac_module *const module_inst) {
     if (sync_done && (motor_state % 3) == 2) {
         motor_state = (motor_state + 1) % 6;
         update_motor_state();
+    } else if (!sync_done) {
+        debug_buffer1[debug_buffer_i] = motor_state;
+        debug_buffer2[debug_buffer_i] = motor_count;
+        debug_buffer_i = (debug_buffer_i + 1) % DEBUG_BUFFER_N;
     }
 }
 
@@ -254,6 +265,10 @@ static void comparator_coil_b_callback(struct ac_module *const module_inst) {
     if (sync_done && (motor_state % 3) == 1) {
         motor_state = (motor_state + 1) % 6;
         update_motor_state();
+    } else if (!sync_done) {
+        debug_buffer1[debug_buffer_i] = motor_state;
+        debug_buffer2[debug_buffer_i] = motor_count;
+        debug_buffer_i = (debug_buffer_i + 1) % DEBUG_BUFFER_N;
     }
 }
 
@@ -262,6 +277,10 @@ static void comparator_coil_c_callback(struct ac_module *const module_inst) {
     if (sync_done && (motor_state % 3) == 0) {
         motor_state = (motor_state + 1) % 6;
         update_motor_state();
+    } else if (!sync_done) {
+        debug_buffer1[debug_buffer_i] = motor_state;
+        debug_buffer2[debug_buffer_i] = motor_count;
+        debug_buffer_i = (debug_buffer_i + 1) % DEBUG_BUFFER_N;
     }
 }
 
@@ -297,10 +316,18 @@ static void configure_comparators() {
     ac_register_callback(&ac_mod0, comparator_coil_b_callback, AC_CALLBACK_COMPARATOR_0);
     ac_register_callback(&ac_mod0, comparator_coil_c_callback, AC_CALLBACK_COMPARATOR_1);
 
+    ac_enable_callback(&ac_mod1, AC_CALLBACK_COMPARATOR_0);
+    ac_enable_callback(&ac_mod0, AC_CALLBACK_COMPARATOR_0);
+    ac_enable_callback(&ac_mod0, AC_CALLBACK_COMPARATOR_1);
+
     struct ac_chan_config ac_chan_coil_comp;
     // default is continuous comparisons with interrupt on compare change
     // and 50mV of hysteresis
     ac_chan_get_config_defaults(&ac_chan_coil_comp);
+    ac_chan_coil_comp.interrupt_selection = AC_CHAN_INTERRUPT_SELECTION_TOGGLE;
+    ac_chan_coil_comp.filter = AC_CHAN_FILTER_MAJORITY_5;
+    ac_chan_coil_comp.enable_hysteresis = true;
+
     ac_chan_coil_comp.positive_input = MOTOR_COMP_POS_A;
     ac_chan_coil_comp.negative_input = MOTOR_COMP_NEG_A;
     ac_chan_set_config(&ac_mod1, AC_CHAN_CHANNEL_0, &ac_chan_coil_comp);
@@ -432,6 +459,9 @@ static void i2c_periph_read_complete(struct i2c_slave_module *const module) {
         case ADDRESS_MSG:
             set_send_reply(i2c_out_buf, I2C_ADDR);
             break;
+        case PHASE_STATE_MSG:
+            set_send_reply(i2c_out_buf, sync_done);
+            break;
         default:
             i2c_out_bytes = 0;
             break;
@@ -561,14 +591,19 @@ static void update_motor_state() {
 
     // modify the pattern (of lows/zeros) override to
     // update which output (of HA, HB, HC) the pwm is directed to
+    // so we specify which two of the three we want zeroed, leaving the third to take pwm
     TCC0->PATT.vec.PGE = STATE_TO_PWM_ENABLE[motor_state];
     PORT->Group[0].OUTCLR.reg = LOW_GATES_ALL;
     PORT->Group[0].OUTSET.reg = MOTOR_ENABLE | STATE_TO_LOW_GATE_ENABLE[motor_state];
+
+    motor_count++;
+    last_transition_ticks = ticks_pwm_cycles;
 }
 
 static void update_motor() {
     uint16_t motor_current = motor_current_raw >> 16;
-    if ((user_duty_cycle == 0 || current_limit == 0) && (!sync_done || target_duty_cycle <= MIN_DUTY_CYCLE || motor_current < MIN_MOTOR_CURRENT)) {
+    bool restart_sync = sync_done && motor_current < MIN_MOTOR_CURRENT;
+    if (((user_duty_cycle == 0 || current_limit == 0) && (!sync_done || target_duty_cycle <= MIN_DUTY_CYCLE)) || restart_sync) {
         // turn off all the outputs
         target_duty_cycle = 0;
         tcc_set_compare_value(&tcc_mod, 0, 0);
@@ -583,6 +618,7 @@ static void update_motor() {
         align_done = false;
         sync_done = false;
         motor_min_ehz = 0;
+        last_duty_adjust_ticks = 0;
         return;
     }
 
@@ -622,9 +658,9 @@ static void update_motor() {
     }
 
     // asynchronous commutation managed by the comparator callbacks
-    if (sync_done) {
-        return;
-    }
+    //if (sync_done) {
+        //return;
+    //}
 
     if (!align_started) {
         align_started = true;
@@ -646,20 +682,22 @@ static void update_motor() {
     } else {
         uint32_t step_ticks = (motor_min_ehz == SYNCHRONOUS_EHZ_START) ? SYNCHRONOUS_FIRST_STEP_TICKS : SYNCHRONOUS_STEP_TICKS;
         if (now_ticks - sync_start_ticks > step_ticks) {
-            if (motor_ehz >= SYNCHRONOUS_EHZ_END) {
-                sync_done = true;
-                motor_min_ehz = SYNCHRONOUS_EHZ_START;
-            } else if ((motor_current_raw >> 16) > MOTOR_RUNNING_CURRENT_THRESH) {
+            if ((motor_current_raw >> 16) > MOTOR_RUNNING_CURRENT_THRESH) {
                 // condition above to make sure the motor has started turning
                 // otherwise we stay in slow synchronous state for debugging
-                motor_min_ehz = motor_min_ehz + 1;
-                uint8_t idx = motor_min_ehz / 3;
-                if (idx >= SYNC_DUTY_N) {
-                    idx = SYNC_DUTY_N - 1;
+                if (motor_min_ehz >= SYNCHRONOUS_EHZ_END) {
+                    //sync_done = true;
+                    //motor_min_ehz = SYNCHRONOUS_EHZ_START;
+                } else {
+                    motor_min_ehz = motor_min_ehz + 1;
+                    uint8_t idx = motor_min_ehz / 3;
+                    if (idx >= SYNC_DUTY_N) {
+                        idx = SYNC_DUTY_N - 1;
+                    }
+                    target_duty_cycle = SYNC_DUTY_BY_3EHZ[idx];
                 }
-                target_duty_cycle = SYNC_DUTY_BY_3EHZ[idx];
-                sync_start_ticks = now_ticks;
             }
+            sync_start_ticks = now_ticks;
         }
     }
 
@@ -668,8 +706,7 @@ static void update_motor() {
         motor_state = (motor_state + 1) % 6;
         update_motor_state();
 
-        last_transition_ticks = now_ticks;
-        motor_count++;
+        //last_transition_ticks = now_ticks;
     }
 
     if ((now_ticks - last_hz_ticks) >= PWM_FREQ / HZ_MEASUREMENT_HZ) {
@@ -685,8 +722,21 @@ ISR(HardFault_Handler) {
     }
 }
 
+extern void initialise_monitor_handles();
+
+ISR(SysTick_Handler) {
+    static int tick_count = 0;
+    tick_count++;
+}
+
 int main() {
     system_init();
+
+    SysTick->CTRL = SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_CLKSOURCE_Msk;
+    SysTick->LOAD = SysTick->CALIB; // ms timer
+
+    //initialise_monitor_handles();
+    //PUTS("BLDC Driver startup\n");
 
     configure_adc();
     configure_comparators();
