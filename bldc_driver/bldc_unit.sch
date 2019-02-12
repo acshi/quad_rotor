@@ -357,7 +357,7 @@ Wire Wire Line
 Wire Wire Line
 	4950 2000 5000 2000
 Text Notes 9550 5650 0    60   ~ 0
-1/6 voltge divider.\n11.1V nominal voltage battery\nmax voltage approx. 13V\nADC 2.23V\n20k, 4.02k, and 22nF give cutoff \nof approx 2kHz. And it is important\nthat the phase zero resistors be an\norder of magnitude greater\nor it'll through this off
+1/6 voltge divider.\n11.1V nominal voltage battery\nmax voltage approx. 13V\nADC 2.23V\n20k, 4.02k, and 22nF give cutoff \nof approx 2kHz. And it is important\nthat the phase zero resistors be an\norder of magnitude greater\nor it'll throw this off
 $Comp
 L Device:C C17
 U 1 1 5AF103CC

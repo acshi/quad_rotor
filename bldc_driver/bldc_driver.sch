@@ -418,7 +418,7 @@ Wire Wire Line
 Wire Wire Line
 	2650 5850 2550 5850
 Wire Wire Line
-	2650 3450 2550 3450
+	2650 3450 2600 3450
 Wire Wire Line
 	5150 4750 5250 4750
 Wire Wire Line
@@ -671,4 +671,24 @@ Wire Wire Line
 	7550 4350 7550 5850
 Wire Wire Line
 	7550 5850 5150 5850
+$Comp
+L Device:R R?
+U 1 1 5C5B1EBF
+P 2600 3200
+F 0 "R?" H 2670 3246 50  0000 L CNN
+F 1 "10k" H 2670 3155 50  0000 L CNN
+F 2 "" V 2530 3200 50  0001 C CNN
+F 3 "~" H 2600 3200 50  0001 C CNN
+	1    2600 3200
+	1    0    0    -1  
+$EndComp
+Text Label 2600 3000 0    60   ~ 0
++3.3V
+Wire Wire Line
+	2600 3000 2600 3050
+Wire Wire Line
+	2600 3350 2600 3450
+Connection ~ 2600 3450
+Wire Wire Line
+	2600 3450 2550 3450
 $EndSCHEMATC

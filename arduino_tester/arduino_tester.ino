@@ -174,7 +174,7 @@ bool performAction(int16_t action, int address) {
         break;
       case 'mh':
         value = sendReadMessage(READ_MEASURED_HZ_MSG, address);
-        Serial << "Hz measurement: " << (int16_t)value / 7.0 << endl;
+        Serial << "Hz measurement: " << (int16_t)value / 7.0 / 6.0 << endl;
         break;
       case 'sc':
         value = (int16_t)Serial.parseInt();
@@ -253,9 +253,11 @@ bool performAction(int16_t action, int address) {
 }
 
 void loop() {
-  static Metro phase_print(200);
+  static Metro phase_print(100);
   if (phase_print.check()) {
     Serial << "Phase: " << sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
+//    Serial << "Hz: " << sendReadMessage(READ_MEASURED_HZ_MSG, selectedAddress) / 6.0 / 7.0 << endl;
+//    Serial << "Amps: " << sendReadMessage(READ_MEASURED_CURRENT_MSG, selectedAddress) * 22.3 / 4096 << endl;
   }
   
   static int32_t lastSentMicros;
