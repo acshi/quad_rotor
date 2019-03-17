@@ -2,18 +2,23 @@
 #include <Streaming.h>
 #include <Wire.h>
 
-#define SET_DUTY_MSG 1
-#define READ_DUTY_MSG 2
-#define READ_MEASURED_HZ_MSG 3
-#define SET_CURRENT_LIMIT_MSG 4
-#define READ_CURRENT_LIMIT_MSG 5
-#define READ_MEASURED_CURRENT_MSG 6
-#define READ_MEASURED_VOLTAGE_MSG 7
-#define READ_TEMPERATURE_MSG 8
-#define READ_ERROR_MSG 9
-#define DIAGNOSTIC_MSG 11
-#define ADDRESS_MSG 12
-#define PHASE_STATE_MSG 13
+enum MSG_CODES {
+    SET_DUTY_MSG = 1,
+    READ_DUTY_MSG,
+    READ_MEASURED_HZ_MSG,
+    SET_CURRENT_LIMIT_MSG,
+    READ_CURRENT_LIMIT_MSG,
+    SET_START_DUTY_MSG,
+    READ_START_DUTY_MSG,
+    READ_MEASURED_CURRENT_MSG,
+    READ_MEASURED_VOLTAGE_MSG,
+    READ_TEMPERATURE_MSG,
+    READ_ERROR_MSG,
+    DIAGNOSTIC_MSG,
+    ADDRESS_MSG,
+    PHASE_STATE_MSG,
+};
+
 #define MSG_END_BYTE 0xed
 #define VAL_END_BYTE 0xec
 
@@ -145,6 +150,20 @@ void setup() {
   Serial << "Done scanning\n";
 }
 
+double measureVoltage(int address) {
+  uint16_t value = sendReadMessage(READ_MEASURED_VOLTAGE_MSG, address);
+  return value * 6 * 2.23 / 4096 + 0.03;
+}
+
+double measureCurrent(int address) {
+  uint16_t value = sendReadMessage(READ_MEASURED_CURRENT_MSG, address);
+  double current = value / 395.0 - 0.02;
+  if (current < 0.0) {
+    current = 0.0;
+  }
+  return current;
+}
+
 bool performAction(int16_t action, int address) {
     uint16_t value;
     switch (action) {
@@ -178,20 +197,27 @@ bool performAction(int16_t action, int address) {
         break;
       case 'sc':
         value = (int16_t)Serial.parseInt();
-        Serial << "Setting current limit to: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
+        Serial << "Setting current limit to: " << value << " (" << (value / 395.0) << "A)\n";
         sendMessageValue(SET_CURRENT_LIMIT_MSG, value, address);
         break;
       case 'gc':
         value = sendReadMessage(READ_CURRENT_LIMIT_MSG, address);
-        Serial << "Current limit: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
+        Serial << "Current limit: " << value << " (" << (value / 395.0) << "A)\n";
+        break;
+      case 'ss':
+        value = (int16_t)Serial.parseInt();
+        Serial << "Setting start duty cycle to: " << value << "\n";
+        sendMessageValue(SET_START_DUTY_MSG, value, address);
+        break;
+      case 'gs':
+        value = sendReadMessage(READ_START_DUTY_MSG, address);
+        Serial << "Start duty cycle: " << value << "\n";
         break;
       case 'mc':
-        value = sendReadMessage(READ_MEASURED_CURRENT_MSG, address);
-        Serial << "Current measurement: " << value << " (" << (value * 22.3 / 4096) << "A)\n";
+        Serial << "Current measurement: " << measureCurrent(address) << "A\n";
         break;
       case 'mv':
-        value = sendReadMessage(READ_MEASURED_VOLTAGE_MSG, address);
-        Serial << "Motor voltage: " << value << " (" << (value * 6 * 2.23 / 4096) << "V)\n";
+        Serial << "Motor voltage: " << measureVoltage(address) << "V\n";
         break;
       case 'mt':
         value = sendReadMessage(READ_TEMPERATURE_MSG, address);
@@ -255,9 +281,14 @@ bool performAction(int16_t action, int address) {
 void loop() {
   static Metro phase_print(100);
   if (phase_print.check()) {
-    Serial << "Phase: " << sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
+//    Serial << "Phase: " << sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
 //    Serial << "Hz: " << sendReadMessage(READ_MEASURED_HZ_MSG, selectedAddress) / 6.0 / 7.0 << endl;
-//    Serial << "Amps: " << sendReadMessage(READ_MEASURED_CURRENT_MSG, selectedAddress) * 22.3 / 4096 << endl;
+    Serial << "Duty Cycle: " << sendReadMessage(READ_DUTY_MSG, selectedAddress);
+    Serial << " Current Limit: " << sendReadMessage(READ_CURRENT_LIMIT_MSG, selectedAddress) / 395.0;
+    Serial << " Amps: " << measureCurrent(selectedAddress);
+    Serial << " Volts: " << measureVoltage(selectedAddress);
+    Serial << " Hz: " << sendReadMessage(READ_MEASURED_HZ_MSG, selectedAddress) / 6.0 / 7.0;
+    Serial << " Ticks: " << sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
   }
   
   static int32_t lastSentMicros;
