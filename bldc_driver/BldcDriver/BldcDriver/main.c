@@ -31,7 +31,7 @@ __attribute__((__aligned__(TRACE_BUFFER_SIZE * sizeof(uint32_t)))) uint32_t mtb[
 //#define SYNC_DUTY_BY_EHZ ((uint16_t[]){ PWM_PERIOD / 12})
 //#define SYNC_DUTY_BY_EHZ ((uint16_t[]){ PWM_PERIOD / 12})
 //#define SYNC_DUTY_N (sizeof(SYNC_DUTY_BY_EHZ) / sizeof(SYNC_DUTY_BY_EHZ[0]))
-#define MAX_DUTY_INC 10
+#define MAX_DUTY_INC 50
 #define MAX_DUTY_DEC 50
 #define OVER_CURRENT_CHANGE 5
 
@@ -160,8 +160,11 @@ uint16_t debug_buffer_i = 0;
 uint16_t debug_buffer2_i = 0;
 
 // for a last_ticks filter
-#define LTICKS_FILTER_N 4
-uint16_t last_ticks_buffer[LTICKS_FILTER_N] = { 0 };
+#define LTICKS_FILTER_MIN_EHZ (10*6*7)
+#define LTICKS_FILTER_MAX_EHZ (100*6*7)
+#define LTICKS_FILTER_MIN_N 2
+#define LTICKS_FILTER_MAX_N 32
+uint32_t last_subticks_buffer[LTICKS_FILTER_MAX_N] = { 0 };
 //uint16_t last_ticks_sorted[LTICKS_FILTER_N] = { 0 };
 
 // current state of each motor, in terms of which coil is power, ground, and floating
@@ -718,38 +721,19 @@ static void update_motor_state() {
     PORT->Group[0].OUTSET.reg = MOTOR_ENABLE | STATE_TO_LOW_GATE_ENABLE[motor_state];
 }
 
-//static int8_t quick_sort_partition(uint16_t *arr, int8_t start, int8_t end) {
-    //uint16_t pivot_val = arr[(start + end) / 2];
-    //int8_t low_idx = start - 1;
-    //int8_t high_idx = end + 1;
-    //while (1) {
-        //do {
-            //low_idx++;
-        //} while (arr[low_idx] < pivot_val);
-        //do {
-            //high_idx--;
-        //} while (arr[high_idx] > pivot_val);
-        //if (low_idx >= high_idx) {
-            //return high_idx;
-        //}
-        //uint16_t high_val = arr[high_idx];
-        //arr[high_idx] = arr[low_idx];
-        //arr[low_idx] = high_val;
-    //}
-//}
-//
-//static void quick_sort_recursive(uint16_t *arr, int8_t start, int8_t end) {
-    //if (start >= end) {
-        //return;
-    //}
-    //int8_t pivot_idx = quick_sort_partition(arr, start, end);
-    //quick_sort_recursive(arr, start, pivot_idx - 1);
-    //quick_sort_recursive(arr, pivot_idx + 1, end);
-//}
-//
-//static void quick_sort(uint16_t *arr, int8_t len) {
-    //quick_sort_recursive(arr, 0, len - 1);
-//}
+// how big of a filter should we use for our current speed?
+// linear interpolation between min and max
+static uint8_t lticks_filter_size() {
+    if (motor_ehz < LTICKS_FILTER_MIN_EHZ) {
+        return LTICKS_FILTER_MIN_N;
+    } else if (motor_ehz > LTICKS_FILTER_MAX_EHZ) {
+        return LTICKS_FILTER_MAX_N;
+    }
+    return 3 + (LTICKS_FILTER_MAX_N - LTICKS_FILTER_MIN_N)
+               * (motor_ehz - LTICKS_FILTER_MIN_EHZ)
+               / (LTICKS_FILTER_MAX_EHZ - LTICKS_FILTER_MIN_EHZ);
+    //return 9;
+}
 
 static void delay_increment_motor_state() {
     if (!has_scheduled_tick) {
@@ -759,30 +743,28 @@ static void delay_increment_motor_state() {
         uint32_t now_subticks = TCC0->COUNT.reg;
 
         uint32_t now_ticks = ticks_pwm_cycles;
-        uint32_t new_ticks_per_phase = now_ticks - last_zero_ticks;
+        int32_t full_ticks_change = now_ticks - last_zero_ticks;
+        int32_t subticks_change = (int32_t)now_subticks - (int32_t)last_zero_subticks;
+        uint32_t total_subticks_change = full_ticks_change * PWM_PERIOD + subticks_change;
 
-        // rotate in new value and sum values
-        uint32_t ticks_sum = new_ticks_per_phase;
-        for (uint8_t i = 0; i < LTICKS_FILTER_N - 1; i++) {
-            last_ticks_buffer[i] = last_ticks_buffer[i + 1];
-            ticks_sum += last_ticks_buffer[i + 1];
-            //last_ticks_sorted[i] = last_ticks_buffer[i + 1];
+        // rotate in new value
+        for (uint8_t i = 0; i < LTICKS_FILTER_MAX_N - 1; i++) {
+            last_subticks_buffer[i] = last_subticks_buffer[i + 1];
         }
-        last_ticks_buffer[LTICKS_FILTER_N - 1] = new_ticks_per_phase;
-        //last_ticks_sorted[LTICKS_FILTER_N - 1] = new_ticks_per_phase;
-//
-        //quick_sort(last_ticks_sorted, LTICKS_FILTER_N);
-        //ticks_per_phase = last_ticks_sorted[LTICKS_FILTER_N / 2];
+        last_subticks_buffer[LTICKS_FILTER_MAX_N - 1] = total_subticks_change;
 
-        ticks_per_phase = ticks_sum / LTICKS_FILTER_N;
+        uint8_t filter_size = lticks_filter_size();
+        int32_t subticks_sum = 0;
+        for (uint8_t i = LTICKS_FILTER_MAX_N - filter_size; i < LTICKS_FILTER_MAX_N; i++) {
+            subticks_sum += last_subticks_buffer[i];
+        }
 
-        //ticks_per_phase_raw = ((uint64_t)ticks_per_phase_raw * 7 + (new_ticks_per_phase << 16)) >> 3;
-        //ticks_per_phase = ticks_per_phase_raw >> 16;
+        uint32_t subticks_per_phase = subticks_sum / filter_size;
+        // advance the time interval to be 22.5 degrees early
+        subticks_per_phase = ((subticks_per_phase * 15) >> 4);
 
-        // we schedule the next tick 22.5 degrees early
-        uint32_t new_scheduled_ticks = last_transition_ticks + ((ticks_per_phase * 15) >> 4);
-
-        scheduled_transition_ticks = new_scheduled_ticks;
+        ticks_per_phase = subticks_per_phase / PWM_PERIOD;
+        scheduled_transition_ticks = last_transition_ticks + ticks_per_phase;
         has_scheduled_tick = true;
         has_reported_tick = false;
         last_zero_ticks = now_ticks;
@@ -800,8 +782,6 @@ static void increment_motor_state() {
     last_transition_ticks = ticks_pwm_cycles;
     has_scheduled_tick = false;
 }
-
-static void determine_rotor_position();
 
 static void update_motor() {
     uint16_t motor_current = motor_current_raw >> 16;
@@ -938,126 +918,6 @@ extern void initialise_monitor_handles();
 
 ISR(SysTick_Handler) {
     system_tick_counter++;
-}
-
-static void start_induction_test_spike_original(uint8_t coil, bool coil_high) {
-    // So PGE here is actually masking the outputs we _don't_ want the pwm on.
-    // We start off with all being high
-    uint16_t PGE = 0;
-
-    // set which coils are grounded
-    PORT->Group[0].OUTCLR.reg = LOW_GATES_ALL;
-    PORT->Group[0].OUTSET.reg = MOTOR_ENABLE;
-    for (uint8_t i = 0; i < 3; i++) {
-        if ((coil_high != (i == coil))) { // coil_high XOR i == coil
-            PORT->Group[0].OUTSET.reg = COIL_LOW_GATE_ENABLE[i];
-            // we want it low, so we don't want it high! mask it!
-            PGE |= COIL_HIGH_GATE_DISABLE[i];
-        }
-    }
-
-    TCC0->PATT.vec.PGE = PGE;
-}
-
-static void start_induction_test_spike(uint8_t set_i, bool polarity) {
-    // So PGE here is actually masking the outputs we _don't_ want the pwm on.
-    // We start off with all being low
-    uint16_t PGE = PWM_GATES_ALL;
-
-    PORT->Group[0].OUTCLR.reg = LOW_GATES_ALL;
-    PORT->Group[0].OUTSET.reg = MOTOR_ENABLE;
-
-    uint8_t high_coil = (set_i + (polarity ? 1 : 0)) % 3;
-    uint8_t low_coil = (set_i + (polarity ? 0 : 1)) % 3;
-
-    PORT->Group[0].OUTSET.reg = COIL_LOW_GATE_ENABLE[low_coil];
-    PGE &= ~COIL_HIGH_GATE_DISABLE[high_coil];
-
-    TCC0->PATT.vec.PGE = PGE;
-}
-
-static void stop_induction_test_spike() {
-    PORT->Group[0].OUTCLR.reg = MOTOR_ENABLE | LOW_GATES_ALL;
-    TCC0->PATT.vec.PGE= PWM_GATES_ALL;
-}
-
-// We do this to ensure solid start-up
-// Use inductive sensing method
-// https://www.infineon.com/dgdl/ap0801810_Sensorless_Variable_Inductance_Sensing.pdf?fileId=db3a304412b407950112b40c7c150b39
-static void determine_rotor_position() {
-    // We take manual control of motor state to do inductive sensing
-    // We will have one coil on, while _both_ the others are grounded (this is not like commutation)
-    // Then that one coil will be grounded, with _both_ others set high
-    // By comparing the current spikes, we know which side the rotor lies on
-    // And we do this for each coils. In the end we know our correct commutation state.
-    adc_current_only = true;
-
-    // use full duty cycle and careful timing on our part
-    tcc_set_compare_value(&tcc_mod, 0, PWM_PERIOD);
-
-    uint32_t current_ticks;
-    uint32_t last_nonzero_ticks = 0;
-    uint32_t trial_start_ticks;
-
-    #define TRIALS_N 7
-    #define TRIAL_TICKS 64
-
-    bool coil_higher[TRIALS_N*3] = { false };
-    uint16_t trial_low[TRIALS_N*3] = { 0 };
-    uint16_t trial_high[TRIALS_N*3] = { 0 };
-    for (uint8_t trial = 0; trial < TRIALS_N; trial++) {
-        for (uint8_t coil_set_i = 0; coil_set_i < 3; coil_set_i++) {
-            // wait for current to be zero 
-            last_nonzero_ticks = ticks_pwm_cycles;
-            while (ticks_pwm_cycles - last_nonzero_ticks < TRIAL_TICKS) {
-                if (startup_current_raw > 10) {
-                    last_nonzero_ticks = ticks_pwm_cycles;
-                }
-            }
-            trial_start_ticks = ticks_pwm_cycles;
-            start_induction_test_spike(coil_set_i, false);
-            // wait for several ticks, keep track of maximum current value.
-            //uint16_t max_current_coil_low = 0;
-            //current_ticks = ticks_pwm_cycles;
-            //while (ticks_pwm_cycles - current_ticks < TRIAL_TICKS) {
-                //if (startup_current_raw > max_current_coil_low) {
-                    //max_current_coil_low = startup_current_raw;
-                //}
-            //}
-            while (startup_current_raw < 1000) { }
-            uint16_t ticks_low = ticks_pwm_cycles - trial_start_ticks;
-            stop_induction_test_spike();
-
-            // repeat with opposite polarity
-            last_nonzero_ticks = ticks_pwm_cycles;
-            while (ticks_pwm_cycles - last_nonzero_ticks < TRIAL_TICKS) {
-                if (startup_current_raw > 10) {
-                    last_nonzero_ticks = ticks_pwm_cycles;
-                }
-            }
-            trial_start_ticks = ticks_pwm_cycles;
-            start_induction_test_spike(coil_set_i, true);
-            // wait for several ticks, keep track of maximum current value.
-            //uint16_t max_current_coil_high = 0;
-            //current_ticks = ticks_pwm_cycles;
-            //while (ticks_pwm_cycles - current_ticks < TRIAL_TICKS) {
-                //if (startup_current_raw > max_current_coil_high) {
-                    //max_current_coil_high = startup_current_raw;
-                //}
-            //}
-            while (startup_current_raw < 1000) { }
-            uint16_t ticks_high = ticks_pwm_cycles - trial_start_ticks;
-            stop_induction_test_spike();
-
-            trial_low[coil_set_i * TRIALS_N + trial] = ticks_low; //max_current_coil_low;
-            trial_high[coil_set_i * TRIALS_N + trial] = ticks_high; // max_current_coil_high;
-            coil_higher[coil_set_i * TRIALS_N + trial] = ticks_high < ticks_low; //max_current_coil_high > max_current_coil_low;
-        }
-    }
-
-    tcc_set_compare_value(&tcc_mod, 0, 0);
-    __asm("nop");
-    adc_current_only = false;
 }
 
 int main() {
