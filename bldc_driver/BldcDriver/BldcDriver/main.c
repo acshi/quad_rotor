@@ -53,7 +53,7 @@ __attribute__((__aligned__(TRACE_BUFFER_SIZE * sizeof(uint32_t)))) uint32_t mtb[
 #define ALIGN_STEP_TICKS (PWM_FREQ * ALIGN_STEP_SEC)
 
 // rate at which speed measurement is updated
-#define HZ_MEASUREMENT_HZ 250
+#define HZ_MEASUREMENT_HZ 100
 
 #define DUTY_ADJUST_HZ 100
 #define DUTY_ADJUST_TICKS (PWM_FREQ / DUTY_ADJUST_HZ)
@@ -141,6 +141,7 @@ volatile uint16_t temp_raw = 0;
 volatile uint32_t motor_ehz_raw = 0; // 16-bit fixed point, by transition (divide by 6 for true electrical hz)
 volatile uint32_t motor_ehz = 0; // by transition (divide by 6 for true electrical hz)
 volatile uint32_t motor_count = 0; // state change count
+volatile uint32_t last_motor_ehz_raw; // from last measurement period
 
 volatile bool has_scheduled_tick = false; // enables the below scheduled tick
 volatile uint32_t scheduled_transition_ticks = 0; // when ticks_pwm_cycles reaches this value, we increment the motor state
@@ -160,12 +161,18 @@ uint16_t debug_buffer_i = 0;
 uint16_t debug_buffer2_i = 0;
 
 // for a last_ticks filter
-#define LTICKS_FILTER_MIN_EHZ (10*6*7)
+#define LTICKS_FILTER_MIN_EHZ (5*6*7)
 #define LTICKS_FILTER_MAX_EHZ (100*6*7)
 #define LTICKS_FILTER_MIN_N 2
 #define LTICKS_FILTER_MAX_N 32
 uint32_t last_subticks_buffer[LTICKS_FILTER_MAX_N] = { 0 };
 //uint16_t last_ticks_sorted[LTICKS_FILTER_N] = { 0 };
+
+#define PREEMPT_MAX_CHANGE ((1 << 16) * 3 / HZ_MEASUREMENT_HZ)
+#define PREEMPT_MIN_CHANGE ((1 << 16) / 20 / HZ_MEASUREMENT_HZ)
+#define PREEMPT_MAX_PREEMPT 16 // out of 128 for a full commutation
+#define PREEMPT_MAX_PREEMPT_NEG -8 // out of 128 for a full commutation
+int16_t preemption_factor = 0;
 
 // current state of each motor, in terms of which coil is power, ground, and floating
 uint8_t motor_state = 0;
@@ -546,7 +553,7 @@ static void i2c_periph_read_complete(struct i2c_slave_module *const module) {
             set_send_reply(i2c_out_buf, I2C_ADDR);
             break;
         case PHASE_STATE_MSG:
-            set_send_reply(i2c_out_buf, ticks_per_phase);
+            set_send_reply(i2c_out_buf, preemption_factor);
             break;
         case SET_START_DUTY_MSG:
             if (gotValue) {
@@ -729,10 +736,39 @@ static uint8_t lticks_filter_size() {
     } else if (motor_ehz > LTICKS_FILTER_MAX_EHZ) {
         return LTICKS_FILTER_MAX_N;
     }
-    return 3 + (LTICKS_FILTER_MAX_N - LTICKS_FILTER_MIN_N)
-               * (motor_ehz - LTICKS_FILTER_MIN_EHZ)
-               / (LTICKS_FILTER_MAX_EHZ - LTICKS_FILTER_MIN_EHZ);
-    //return 9;
+    uint16_t rounding = (LTICKS_FILTER_MAX_N - LTICKS_FILTER_MIN_N) / (LTICKS_FILTER_MAX_EHZ - LTICKS_FILTER_MIN_EHZ) / 2;
+    return LTICKS_FILTER_MIN_N + (motor_ehz - LTICKS_FILTER_MIN_EHZ + rounding)
+                               * (LTICKS_FILTER_MAX_N - LTICKS_FILTER_MIN_N)
+                               / (LTICKS_FILTER_MAX_EHZ - LTICKS_FILTER_MIN_EHZ);
+}
+
+// how many degrees ahead of time to schedule the tick
+// the units are 1/128 of a commutation, or about 2.8 degrees
+// can be both positive or negative (for deceleration)
+// linear interpolation between values
+static int16_t degree_preemption_factor() {
+    // we use the full raw values to see small changes
+    // and we are looking at percentage change here
+    int32_t ehz_change = ((int32_t)motor_ehz_raw - (int32_t)last_motor_ehz_raw) / (int32_t)motor_ehz;
+    int32_t abs_change = (ehz_change > 0) ? ehz_change : -ehz_change;
+
+    if (abs_change > PREEMPT_MAX_CHANGE) {
+        if (ehz_change > 0) {
+            return PREEMPT_MAX_PREEMPT;
+        }
+        return PREEMPT_MAX_PREEMPT_NEG;
+    }
+    if (abs_change < PREEMPT_MIN_CHANGE) {
+        return 0;
+    }
+    //int16_t rounding = PREEMPT_MAX_PREEMPT / (PREEMPT_MAX_CHANGE - PREEMPT_MIN_CHANGE) / 2;
+    int16_t factor = (abs_change - PREEMPT_MIN_CHANGE)
+                     * PREEMPT_MAX_PREEMPT
+                     / (PREEMPT_MAX_CHANGE - PREEMPT_MIN_CHANGE);
+    if (factor < PREEMPT_MAX_PREEMPT_NEG) {
+        return PREEMPT_MAX_PREEMPT_NEG;
+    }
+    return factor;
 }
 
 static void delay_increment_motor_state() {
@@ -760,8 +796,10 @@ static void delay_increment_motor_state() {
         }
 
         uint32_t subticks_per_phase = subticks_sum / filter_size;
-        // advance the time interval to be 22.5 degrees early
-        subticks_per_phase = ((subticks_per_phase * 15) >> 4);
+        // advance the time interval by some number of degrees
+        // this is necessary for fast acceleration/deceleration
+        preemption_factor = degree_preemption_factor();
+        subticks_per_phase = ((subticks_per_phase * (128 - preemption_factor)) >> 7);
 
         ticks_per_phase = subticks_per_phase / PWM_PERIOD;
         scheduled_transition_ticks = last_transition_ticks + ticks_per_phase;
@@ -787,10 +825,6 @@ static void update_motor() {
     uint16_t motor_current = motor_current_raw >> 16;
     bool restart_sync = sync_done && (motor_current < MIN_MOTOR_CURRENT || motor_ehz < SYNCHRONOUS_EHZ_START);
     if (((user_duty_cycle == 0 || current_limit == 0) && (!sync_done || target_duty_cycle <= MIN_DUTY_CYCLE)) || restart_sync) {
-        if (restart_sync) {
-            __asm("nop");
-        }
-
         // turn off all the outputs
         target_duty_cycle = 0;
         tcc_set_compare_value(&tcc_mod, 0, 0);
@@ -889,8 +923,10 @@ static void update_motor() {
 static void update_speed_estimate() {
     uint32_t now_ticks = ticks_pwm_cycles;
     if ((now_ticks - last_hz_ticks) >= PWM_FREQ / HZ_MEASUREMENT_HZ) {
+        last_motor_ehz_raw = motor_ehz_raw;
+
         uint32_t new_ehz = (motor_count * HZ_MEASUREMENT_HZ + 3);
-        motor_ehz_raw = ((uint64_t)motor_ehz_raw * 31 + (new_ehz << 16) + 15) >> 5;
+        motor_ehz_raw = ((uint64_t)motor_ehz_raw * 15 + (new_ehz << 16) + 7) >> 4;
         motor_ehz = motor_ehz_raw >> 16;
         motor_count = 0;
         last_hz_ticks = now_ticks;
