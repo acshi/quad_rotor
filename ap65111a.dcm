@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP AP6511A
+D Buck Switching Regulator IC Positive Adjustable 0.8V 1 Output 1.5A
+K Buck Regulator
+F https://www.diodes.com/assets/Datasheets/AP65111A.pdf
+$ENDCMP
+#
+#End Doc Library
