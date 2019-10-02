@@ -152,13 +152,13 @@ void setup() {
 
 double measureVoltage(int address) {
   uint16_t value = sendReadMessage(READ_MEASURED_VOLTAGE_MSG, address);
-  return value * 6 * 2.23 / 4096 + 0.03;
+  return value * 6 * 2.23 / 8192 - 0.01;
 }
 
 double measureCurrent(int address) {
   uint16_t value = sendReadMessage(READ_MEASURED_CURRENT_MSG, address);
-  double current = value / 395.0 - 0.02;
-  if (current < 0.0) {
+  double current = value / 395.0 / 2.0;
+  if (current < 0.018) {
     current = 0.0;
   }
   return current;
@@ -280,7 +280,7 @@ bool performAction(int16_t action, int address) {
 
 void loop() {
   static Metro phase_print(100);
-  if (phase_print.check()) {
+  if (false && phase_print.check()) {
 //    Serial << "Phase: " << sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
 //    Serial << "Hz: " << sendReadMessage(READ_MEASURED_HZ_MSG, selectedAddress) / 6.0 / 7.0 << endl;
     Serial << "Duty Cycle: " << sendReadMessage(READ_DUTY_MSG, selectedAddress);
@@ -288,7 +288,16 @@ void loop() {
     Serial << " Amps: " << measureCurrent(selectedAddress);
     Serial << " Volts: " << measureVoltage(selectedAddress);
     Serial << " Hz: " << sendReadMessage(READ_MEASURED_HZ_MSG, selectedAddress) / 6.0 / 7.0;
-    Serial << " Ticks: " << sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
+    Serial << " Ticks: " << (int16_t)sendReadMessage(PHASE_STATE_MSG, selectedAddress) << endl;
+  }
+
+  static Metro reset_metro(500);
+  if (false && reset_metro.check()) {
+    sendMessageValue(SET_START_DUTY_MSG, 1000, selectedAddress);
+    sendMessageValue(SET_DUTY_MSG, 100, selectedAddress);
+    sendMessageValue(SET_DUTY_MSG, 0, selectedAddress);
+    int check_value = sendReadMessage(READ_START_DUTY_MSG, selectedAddress);
+    Serial << "Had reset? " << ((check_value == 0xffff) ? "yes" : "NO!") << "\n";
   }
   
   static int32_t lastSentMicros;
