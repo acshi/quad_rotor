@@ -35,7 +35,7 @@ module arm() {
     arm_t = 12;
     base_w = arm_w-arm_t/2;
     mount_t = arm_t;
-    m_d1 = 16.6; // distance between closer together motor mounting holes
+    m_d1 = 16.2; // distance between closer together motor mounting holes
     m_d2 = 19; // and between the farther apart ones
     m_o = (bulb_d - m_d1) / 2; // offset from edge for mounting holes
     m_hole_d = 8; // center hole diameter
