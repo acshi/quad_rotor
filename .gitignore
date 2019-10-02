@@ -4,7 +4,14 @@
 *.bck
 *.hex
 *.zip
+*.txt
+*.gcode
+*.html
+*.log
+*.png
+*.mid
 .vs/
+*/rescue-backup/
 Release/
 Debug/
 *-cache.lib
