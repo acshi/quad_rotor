@@ -90,7 +90,7 @@ L Device:C C14
 U 1 1 5AE1FE1D
 P 8750 3800
 F 0 "C14" V 8800 3900 50  0000 L CNN
-F 1 "0.68uF" V 8800 3500 50  0000 L CNN
+F 1 "1uF 50V" V 8850 3600 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 8788 3650 50  0001 C CNN
 F 3 "" H 8750 3800 50  0001 C CNN
 F 4 "50V" V 8700 3650 60  0000 C CNN "Voltage"
@@ -185,72 +185,72 @@ Wire Wire Line
 	4700 6150 4700 6100
 Wire Wire Line
 	1700 6150 2150 6150
-Text HLabel 1500 1300 0    60   Input ~ 0
+Text HLabel 1450 1550 0    60   Input ~ 0
 +V_MOTOR
 Wire Wire Line
-	1500 1300 1600 1300
-Text Label 1600 1300 0    60   ~ 0
+	1450 1550 1550 1550
+Text Label 1550 1550 0    60   ~ 0
 +V_MOTOR
-Text Label 1650 1500 0    60   ~ 0
+Text Label 1600 1750 0    60   ~ 0
 IN_HA
-Text Label 1650 1700 0    60   ~ 0
+Text Label 1600 1950 0    60   ~ 0
 IN_HB
-Text Label 1650 1900 0    60   ~ 0
+Text Label 1600 2150 0    60   ~ 0
 IN_HC
-Text Label 1650 2100 0    60   ~ 0
+Text Label 1600 2350 0    60   ~ 0
 IN_LA
-Text Label 1650 3150 0    60   ~ 0
+Text Label 1600 3400 0    60   ~ 0
 CURRENT_V
-Text HLabel 1500 1500 0    60   Input ~ 0
+Text HLabel 1450 1750 0    60   Input ~ 0
 IN_HA
-Text HLabel 1500 1700 0    60   Input ~ 0
+Text HLabel 1450 1950 0    60   Input ~ 0
 IN_HB
-Text HLabel 1500 1900 0    60   Input ~ 0
+Text HLabel 1450 2150 0    60   Input ~ 0
 IN_HC
-Text HLabel 1500 2100 0    60   Input ~ 0
+Text HLabel 1450 2350 0    60   Input ~ 0
 IN_LA
-Text HLabel 1500 3150 0    60   Output ~ 0
+Text HLabel 1450 3400 0    60   Output ~ 0
 CURRENT
 Wire Wire Line
-	1500 1500 1650 1500
+	1450 1750 1600 1750
 Wire Wire Line
-	1650 1700 1500 1700
+	1600 1950 1450 1950
 Wire Wire Line
-	1500 1900 1650 1900
+	1450 2150 1600 2150
 Wire Wire Line
-	1650 2100 1500 2100
+	1600 2350 1450 2350
 Wire Wire Line
-	1500 3150 1650 3150
-Text HLabel 1500 3350 0    60   Output ~ 0
+	1450 3400 1600 3400
+Text HLabel 1450 3600 0    60   Output ~ 0
 MOTOR_A
 Wire Wire Line
-	1500 3350 1650 3350
-Text Label 2100 3350 0    60   ~ 0
+	1450 3600 1600 3600
+Text Label 2050 3600 0    60   ~ 0
 MOT_SENSE_A
-Text HLabel 1500 3550 0    60   Output ~ 0
+Text HLabel 1450 3800 0    60   Output ~ 0
 MOTOR_B
 Wire Wire Line
-	1500 3550 1850 3550
-Text Label 2100 3550 0    60   ~ 0
+	1450 3800 1800 3800
+Text Label 2050 3800 0    60   ~ 0
 MOT_SENSE_B
-Text HLabel 1500 3750 0    60   Output ~ 0
+Text HLabel 1450 4000 0    60   Output ~ 0
 MOTOR_C
 Wire Wire Line
-	1500 3750 2050 3750
-Text Label 2100 3750 0    60   ~ 0
+	1450 4000 2000 4000
+Text Label 2050 4000 0    60   ~ 0
 MOT_SENSE_C
-Text Label 1650 2300 0    60   ~ 0
+Text Label 1600 2550 0    60   ~ 0
 IN_LB
-Text HLabel 1500 2300 0    60   Input ~ 0
+Text HLabel 1450 2550 0    60   Input ~ 0
 IN_LB
 Wire Wire Line
-	1650 2300 1500 2300
-Text Label 1650 2950 0    60   ~ 0
+	1600 2550 1450 2550
+Text Label 1600 3200 0    60   ~ 0
 ENABLE
-Text HLabel 1500 2950 0    60   Input ~ 0
+Text HLabel 1450 3200 0    60   Input ~ 0
 ENABLE
 Wire Wire Line
-	1650 2950 1500 2950
+	1600 3200 1450 3200
 $Comp
 L Device:R R23
 U 1 1 5AE30826
@@ -286,11 +286,11 @@ F 3 "" H 10750 4000 50  0001 C CNN
 $EndComp
 Text Label 9750 3950 0    60   ~ 0
 MOT_SENSE_A
-Text HLabel 1500 1100 0    60   Input ~ 0
+Text HLabel 1450 1350 0    60   Input ~ 0
 +3.3V
 Wire Wire Line
-	1500 1100 1600 1100
-Text Label 1600 1100 0    60   ~ 0
+	1450 1350 1550 1350
+Text Label 1550 1350 0    60   ~ 0
 +3.3V
 Text Notes 3150 1600 0    60   ~ 0
 10-bit ADC, INA199 w/ +-150uV offset voltage, 50x gain\n2.7-26V supply\nw/ 3.3V reference:\n2mR = 0.1V/A = 33A range = 32.23mA/bit = 64.45uV/bit\nActual precision approx. 75mA\nw/ 2.23V reference:\n2mR = 0.1V/A = 22.3A range = 21.78mA/bit = 43.55uV/bit\nActual precision approx. 75mA
@@ -374,7 +374,7 @@ L Device:R R14
 U 1 1 5B46D7E3
 P 8300 3900
 F 0 "R14" V 8250 3700 50  0000 C CNN
-F 1 "4.7R" V 8300 3900 50  0000 C CNN
+F 1 "200R" V 8300 3900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 3900 50  0001 C CNN
 F 3 "" H 8300 3900 50  0001 C CNN
 	1    8300 3900
@@ -478,7 +478,7 @@ Wire Wire Line
 	3050 5550 3000 5550
 Text Label 3050 5550 1    60   ~ 0
 MOTF_B
-Text Notes 1700 6850 0    60   ~ 0
+Text Notes 850  6600 0    60   ~ 0
 MOTF here stands for "motor phase filtered,"\nsince it should be safe from negative voltage transients
 $Comp
 L Device:R R13
@@ -564,7 +564,7 @@ L Device:C C15
 U 1 1 5B6F5BB8
 P 8750 4100
 F 0 "C15" V 8800 4200 50  0000 L CNN
-F 1 "0.68uF" V 8800 3800 50  0000 L CNN
+F 1 "1uF 50V" V 8800 3800 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 8788 3950 50  0001 C CNN
 F 3 "" H 8750 4100 50  0001 C CNN
 F 4 "50V" V 8700 3950 60  0000 C CNN "Voltage"
@@ -627,7 +627,7 @@ L Device:R R15
 U 1 1 5B6F5BDC
 P 8300 4200
 F 0 "R15" V 8250 4000 50  0000 C CNN
-F 1 "4.7R" V 8300 4200 50  0000 C CNN
+F 1 "200R" V 8300 4200 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4200 50  0001 C CNN
 F 3 "" H 8300 4200 50  0001 C CNN
 	1    8300 4200
@@ -695,7 +695,7 @@ L Device:C C16
 U 1 1 5B6FA581
 P 8750 4400
 F 0 "C16" V 8800 4500 50  0000 L CNN
-F 1 "0.68uF" V 8800 4100 50  0000 L CNN
+F 1 "1uF 50V" V 8800 4100 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 8788 4250 50  0001 C CNN
 F 3 "" H 8750 4400 50  0001 C CNN
 F 4 "50V" V 8700 4250 60  0000 C CNN "Voltage"
@@ -758,7 +758,7 @@ L Device:R R16
 U 1 1 5B6FA5A5
 P 8300 4500
 F 0 "R16" V 8250 4300 50  0000 C CNN
-F 1 "4.7R" V 8300 4500 50  0000 C CNN
+F 1 "200R" V 8300 4500 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4500 50  0001 C CNN
 F 3 "" H 8300 4500 50  0001 C CNN
 	1    8300 4500
@@ -834,7 +834,7 @@ L Device:R R17
 U 1 1 5B6FD398
 P 8300 4700
 F 0 "R17" V 8250 4500 50  0000 C CNN
-F 1 "4.7R" V 8300 4700 50  0000 C CNN
+F 1 "10R" V 8300 4700 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4700 50  0001 C CNN
 F 3 "" H 8300 4700 50  0001 C CNN
 	1    8300 4700
@@ -851,7 +851,7 @@ L Device:R R18
 U 1 1 5B6FD450
 P 8300 4800
 F 0 "R18" V 8250 4600 50  0000 C CNN
-F 1 "4.7R" V 8300 4800 50  0000 C CNN
+F 1 "10R" V 8300 4800 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4800 50  0001 C CNN
 F 3 "" H 8300 4800 50  0001 C CNN
 	1    8300 4800
@@ -868,7 +868,7 @@ L Device:R R19
 U 1 1 5B6FD4B8
 P 8300 4900
 F 0 "R19" V 8250 4700 50  0000 C CNN
-F 1 "4.7R" V 8300 4900 50  0000 C CNN
+F 1 "10R" V 8300 4900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4900 50  0001 C CNN
 F 3 "" H 8300 4900 50  0001 C CNN
 	1    8300 4900
@@ -1009,18 +1009,18 @@ Wire Wire Line
 Connection ~ 6250 4900
 Text Notes 6000 5750 0    60   ~ 0
 Overcurrent protection at about 0.52V on ISNS.\nThe IC has a bug: ISNS must be used to prevent startup spikes.\n2.2 * Current_V / (2.2+15) gives 36A limit.\nMore protection will  be done by the microcontroller.
-Text Label 1650 2500 0    60   ~ 0
+Text Label 1600 2750 0    60   ~ 0
 IN_LC
-Text HLabel 1500 2500 0    60   Input ~ 0
+Text HLabel 1450 2750 0    60   Input ~ 0
 IN_LC
 Wire Wire Line
-	1650 2500 1500 2500
-Text Label 1650 2750 0    60   ~ 0
+	1600 2750 1450 2750
+Text Label 1600 3000 0    60   ~ 0
 ~FAULT
-Text HLabel 1500 2750 0    60   Output ~ 0
+Text HLabel 1450 3000 0    60   Output ~ 0
 ~FAULT
 Wire Wire Line
-	1500 2750 1650 2750
+	1450 3000 1600 3000
 Text Label 6800 3900 2    60   ~ 0
 ~FAULT
 Wire Wire Line
@@ -1053,57 +1053,57 @@ Wire Wire Line
 	6950 4500 6800 4500
 Wire Wire Line
 	6800 4600 6950 4600
-Text HLabel 1500 4250 0    60   Output ~ 0
+Text HLabel 1450 4500 0    60   Output ~ 0
 MOTOR_ZERO
 $Comp
 L Device:R R5
 U 1 1 5B7CE39B
-P 1650 3950
-F 0 "R5" V 1730 3950 50  0000 C CNN
-F 1 "100k" V 1650 3950 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1580 3950 50  0001 C CNN
-F 3 "" H 1650 3950 50  0001 C CNN
-	1    1650 3950
+P 1600 4200
+F 0 "R5" V 1680 4200 50  0000 C CNN
+F 1 "100k" V 1600 4200 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1530 4200 50  0001 C CNN
+F 3 "" H 1600 4200 50  0001 C CNN
+	1    1600 4200
 	-1   0    0    1   
 $EndComp
 $Comp
 L Device:R R6
 U 1 1 5B7CF3EE
-P 1850 3950
-F 0 "R6" V 1930 3950 50  0000 C CNN
-F 1 "100k" V 1850 3950 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1780 3950 50  0001 C CNN
-F 3 "" H 1850 3950 50  0001 C CNN
-	1    1850 3950
+P 1800 4200
+F 0 "R6" V 1880 4200 50  0000 C CNN
+F 1 "100k" V 1800 4200 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1730 4200 50  0001 C CNN
+F 3 "" H 1800 4200 50  0001 C CNN
+	1    1800 4200
 	-1   0    0    1   
 $EndComp
 $Comp
 L Device:R R8
 U 1 1 5B7CF49C
-P 2050 3950
-F 0 "R8" V 2130 3950 50  0000 C CNN
-F 1 "100k" V 2050 3950 50  0000 C CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1980 3950 50  0001 C CNN
-F 3 "" H 2050 3950 50  0001 C CNN
-	1    2050 3950
+P 2000 4200
+F 0 "R8" V 2080 4200 50  0000 C CNN
+F 1 "100k" V 2000 4200 50  0000 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1930 4200 50  0001 C CNN
+F 3 "" H 2000 4200 50  0001 C CNN
+	1    2000 4200
 	-1   0    0    1   
 $EndComp
 Wire Wire Line
-	1650 3350 1650 3800
+	1600 3600 1600 4050
 Wire Wire Line
-	1850 3550 1850 3800
+	1800 3800 1800 4050
 Wire Wire Line
-	2050 3750 2050 3800
+	2000 4000 2000 4050
 Wire Wire Line
-	1650 4100 1650 4250
+	1600 4350 1600 4500
 Wire Wire Line
-	1500 4250 1650 4250
+	1450 4500 1600 4500
 Wire Wire Line
-	1850 4250 1850 4100
-Connection ~ 1650 4250
+	1800 4500 1800 4350
+Connection ~ 1600 4500
 Wire Wire Line
-	2050 4250 2050 4100
-Connection ~ 1850 4250
+	2000 4500 2000 4350
+Connection ~ 1800 4500
 $Comp
 L Device:D_Schottky D7
 U 1 1 5B7E4263
@@ -1218,18 +1218,18 @@ Wire Wire Line
 Wire Wire Line
 	6250 4900 6950 4900
 Wire Wire Line
-	1650 4250 1850 4250
+	1600 4500 1800 4500
 Wire Wire Line
-	1850 4250 2050 4250
+	1800 4500 2000 4500
 Wire Wire Line
-	2050 3750 2100 3750
-Connection ~ 2050 3750
+	2000 4000 2050 4000
+Connection ~ 2000 4000
 Wire Wire Line
-	2100 3550 1850 3550
-Connection ~ 1850 3550
+	2050 3800 1800 3800
+Connection ~ 1800 3800
 Wire Wire Line
-	1650 3350 2100 3350
-Connection ~ 1650 3350
+	1600 3600 2050 3600
+Connection ~ 1600 3600
 Text Label 7650 5250 2    60   ~ 0
 CURRENT_V
 Wire Wire Line
@@ -1239,7 +1239,7 @@ L Device:R R31
 U 1 1 5C3FE5E4
 P 7900 5250
 F 0 "R31" V 7800 5250 50  0000 C CNN
-F 1 "15K" V 7900 5250 50  0000 C CNN
+F 1 "20K" V 7900 5250 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 7830 5250 50  0001 C CNN
 F 3 "" H 7900 5250 50  0001 C CNN
 	1    7900 5250
@@ -1250,7 +1250,7 @@ L Device:R R32
 U 1 1 5C3FE67A
 P 8300 5250
 F 0 "R32" V 8200 5250 50  0000 C CNN
-F 1 "2.2K" V 8300 5250 50  0000 C CNN
+F 1 "3K" V 8300 5250 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 5250 50  0001 C CNN
 F 3 "" H 8300 5250 50  0001 C CNN
 	1    8300 5250
