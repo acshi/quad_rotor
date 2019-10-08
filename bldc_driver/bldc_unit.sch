@@ -287,11 +287,11 @@ $EndComp
 Text Label 9750 3950 0    60   ~ 0
 MOT_SENSE_A
 Text HLabel 1450 1350 0    60   Input ~ 0
-+3.3V
++5V
 Wire Wire Line
 	1450 1350 1550 1350
 Text Label 1550 1350 0    60   ~ 0
-+3.3V
++5V
 Text Notes 3150 1600 0    60   ~ 0
 10-bit ADC, INA199 w/ +-150uV offset voltage, 50x gain\n2.7-26V supply\nw/ 3.3V reference:\n2mR = 0.1V/A = 33A range = 32.23mA/bit = 64.45uV/bit\nActual precision approx. 75mA\nw/ 2.23V reference:\n2mR = 0.1V/A = 22.3A range = 21.78mA/bit = 43.55uV/bit\nActual precision approx. 75mA
 $Comp
@@ -308,7 +308,7 @@ $EndComp
 Text Label 3250 2550 2    60   ~ 0
 MOTOR_SHUNT
 Text Label 4300 2350 2    60   ~ 0
-+3.3V
++5V
 Wire Wire Line
 	5300 2350 5250 2350
 Wire Wire Line
@@ -351,7 +351,7 @@ F 3 "" H 5000 2000 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 Text Label 4600 2000 2    60   ~ 0
-+3.3V
++5V
 Wire Wire Line
 	4600 2000 4650 2000
 Wire Wire Line
