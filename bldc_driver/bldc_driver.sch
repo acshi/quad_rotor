@@ -411,12 +411,6 @@ Wire Wire Line
 Wire Wire Line
 	5850 4650 5100 4650
 Wire Wire Line
-	7450 4350 7600 4350
-Wire Wire Line
-	7600 4350 7600 5650
-Wire Wire Line
-	7600 5650 5800 5650
-Wire Wire Line
 	7450 4200 7650 4200
 Wire Wire Line
 	7650 5700 5750 5700
@@ -548,10 +542,6 @@ $EndComp
 Wire Wire Line
 	4000 3250 4050 3250
 Wire Wire Line
-	5800 4550 5100 4550
-Wire Wire Line
-	5800 4550 5800 5650
-Wire Wire Line
 	5100 4750 5900 4750
 Wire Wire Line
 	6100 3750 5100 3750
@@ -579,4 +569,50 @@ Wire Wire Line
 	5600 5750 5100 5750
 Wire Wire Line
 	5100 5850 5200 5850
+Text Label 5200 3750 0    50   ~ 0
+HB
+Text Label 5200 3850 0    50   ~ 0
+HA
+Text Label 5200 3950 0    50   ~ 0
+LB
+Text Label 5200 4050 0    50   ~ 0
+LA
+Text Label 5200 4750 0    50   ~ 0
+MOTOR_C
+Text Label 5200 4650 0    50   ~ 0
+MOTOR_B
+Text Label 3800 5550 2    50   ~ 0
+MOTOR_A
+Text Label 5200 4850 0    50   ~ 0
+CURRENT
+Text Label 5200 4950 0    50   ~ 0
+V_MOT
+Text Label 5200 5350 0    50   ~ 0
+HC
+Text Label 5200 5450 0    50   ~ 0
+LC
+Text Label 5200 5650 0    50   ~ 0
+ENABLE
+Text Label 5200 5750 0    50   ~ 0
+~FAULT
+Text Label 5200 6050 0    50   ~ 0
+MOTOR_A
+Wire Wire Line
+	5100 6050 5200 6050
+Wire Wire Line
+	7450 4350 7750 4350
+Text Label 7750 4350 0    50   ~ 0
+MOTOR_A
+Wire Wire Line
+	3800 5550 3900 5550
+Text Notes 2300 5550 0    50   ~ 0
+just to use the pin as a wire
+Wire Wire Line
+	5100 3650 5200 3650
+Text Label 5200 3650 0    50   ~ 0
+TRIGGER
+Wire Wire Line
+	3900 5650 3800 5650
+Text Label 3800 5650 2    50   ~ 0
+TRIGGER2
 $EndSCHEMATC
