@@ -356,8 +356,8 @@ Wire Wire Line
 	4600 2000 4650 2000
 Wire Wire Line
 	4950 2000 5000 2000
-Text Notes 9550 5650 0    60   ~ 0
-1/6 voltge divider.\n11.1V nominal voltage battery\nmax voltage approx. 13V\nADC 2.23V\n20k, 4.02k, and 22nF give cutoff \nof approx 2kHz. And it is important\nthat the phase zero resistors be an\norder of magnitude greater\nor it'll throw this off
+Text Notes 9450 5650 0    60   ~ 0
+1/6 voltge divider.\n11.1V nominal voltage battery\nmax voltage approx. 13V\nADC 2.23V\n20k, 4.02k, and 22nF give cutoff \nof approx 2kHz. And it is important\nthat the "motor zero" resistors be an\norder of magnitude greater\nor it'll throw this off
 $Comp
 L Device:C C17
 U 1 1 5AF103CC
@@ -374,7 +374,7 @@ L Device:R R14
 U 1 1 5B46D7E3
 P 8300 3900
 F 0 "R14" V 8250 3700 50  0000 C CNN
-F 1 "200R" V 8300 3900 50  0000 C CNN
+F 1 "10R" V 8300 3900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 3900 50  0001 C CNN
 F 3 "" H 8300 3900 50  0001 C CNN
 	1    8300 3900
@@ -627,7 +627,7 @@ L Device:R R15
 U 1 1 5B6F5BDC
 P 8300 4200
 F 0 "R15" V 8250 4000 50  0000 C CNN
-F 1 "200R" V 8300 4200 50  0000 C CNN
+F 1 "10R" V 8300 4200 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4200 50  0001 C CNN
 F 3 "" H 8300 4200 50  0001 C CNN
 	1    8300 4200
@@ -758,7 +758,7 @@ L Device:R R16
 U 1 1 5B6FA5A5
 P 8300 4500
 F 0 "R16" V 8250 4300 50  0000 C CNN
-F 1 "200R" V 8300 4500 50  0000 C CNN
+F 1 "10R" V 8300 4500 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4500 50  0001 C CNN
 F 3 "" H 8300 4500 50  0001 C CNN
 	1    8300 4500
@@ -834,7 +834,7 @@ L Device:R R17
 U 1 1 5B6FD398
 P 8300 4700
 F 0 "R17" V 8250 4500 50  0000 C CNN
-F 1 "10R" V 8300 4700 50  0000 C CNN
+F 1 "1R" V 8300 4700 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4700 50  0001 C CNN
 F 3 "" H 8300 4700 50  0001 C CNN
 	1    8300 4700
@@ -851,7 +851,7 @@ L Device:R R18
 U 1 1 5B6FD450
 P 8300 4800
 F 0 "R18" V 8250 4600 50  0000 C CNN
-F 1 "10R" V 8300 4800 50  0000 C CNN
+F 1 "1R" V 8300 4800 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4800 50  0001 C CNN
 F 3 "" H 8300 4800 50  0001 C CNN
 	1    8300 4800
@@ -868,7 +868,7 @@ L Device:R R19
 U 1 1 5B6FD4B8
 P 8300 4900
 F 0 "R19" V 8250 4700 50  0000 C CNN
-F 1 "10R" V 8300 4900 50  0000 C CNN
+F 1 "1R" V 8300 4900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 8230 4900 50  0001 C CNN
 F 3 "" H 8300 4900 50  0001 C CNN
 	1    8300 4900
@@ -1280,4 +1280,8 @@ Wire Wire Line
 	8100 5250 8150 5250
 Wire Wire Line
 	8500 5250 8450 5250
+Text Notes 9450 6350 0    50   ~ 0
+TODO: For the AVR with ADC at 5V\nwe might as well make a smaller divider\nAnd do we need a smaller cutoff frequency?
+Text Notes 9350 5800 0    50   ~ 0
+fc = (R1 + R2) / (2pi * R1 * R2 * C1)
 $EndSCHEMATC

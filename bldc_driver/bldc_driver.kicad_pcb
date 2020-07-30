@@ -1,9 +1,9 @@
-(kicad_pcb (version 20171130) (host pcbnew 5.0.2-bee76a0~70~ubuntu18.04.1)
+(kicad_pcb (version 20171130) (host pcbnew "(5.0.2)-1")
 
   (general
     (thickness 1.6)
     (drawings 28)
-    (tracks 699)
+    (tracks 698)
     (zones 0)
     (modules 82)
     (nets 64)
@@ -3743,7 +3743,6 @@
   (segment (start 135.469 82.312) (end 136.755 81.026) (width 0.25) (layer F.Cu) (net 40))
   (segment (start 135.469 83.312) (end 135.469 82.312) (width 0.25) (layer F.Cu) (net 40))
   (segment (start 149.63 97.663) (end 149.855 97.663) (width 0.25) (layer F.Cu) (net 40))
-  (segment (start 130.9534 95.504) (end 130.9534 96.304) (width 0.25) (layer F.Cu) (net 40))
   (segment (start 133.597999 74.529601) (end 133.597999 77.228001) (width 0.25) (layer B.Cu) (net 40))
   (segment (start 133.597999 77.228001) (end 133.772997 77.402999) (width 0.25) (layer B.Cu) (net 40))
   (segment (start 133.772997 77.402999) (end 136.414735 77.402999) (width 0.25) (layer B.Cu) (net 40))

@@ -615,4 +615,32 @@ Wire Wire Line
 	3900 5650 3800 5650
 Text Label 3800 5650 2    50   ~ 0
 TRIGGER2
+Text Label 3350 2700 2    60   ~ 0
++5V
+Wire Wire Line
+	3350 2950 3350 2700
+$Comp
+L Device:C_Small C?
+U 1 1 5F16FA40
+P 3350 3050
+F 0 "C?" H 3250 2950 50  0000 L CNN
+F 1 "1uF" H 3200 3150 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 3350 3050 50  0001 C CNN
+F 3 "~" H 3350 3050 50  0001 C CNN
+	1    3350 3050
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5F16FA46
+P 3350 3200
+F 0 "#PWR?" H 3350 2950 50  0001 C CNN
+F 1 "GND" H 3355 3027 50  0000 C CNN
+F 2 "" H 3350 3200 50  0001 C CNN
+F 3 "" H 3350 3200 50  0001 C CNN
+	1    3350 3200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3350 3200 3350 3150
 $EndSCHEMATC
