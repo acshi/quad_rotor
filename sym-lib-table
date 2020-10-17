@@ -5,7 +5,7 @@
   (lib (name atsams70j19a)(type Legacy)(uri ${KIPRJMOD}/atsams70j19a.lib)(options "")(descr ""))
   (lib (name lps25hbtr)(type Legacy)(uri ${KIPRJMOD}/lps25hbtr.lib)(options "")(descr ""))
   (lib (name 74AVC4T774PWJ)(type Legacy)(uri ${KIPRJMOD}/74AVC4T774PWJ.lib)(options "")(descr ""))
-  (lib (name ap65111a)(type Legacy)(uri C:/Users/Acshi/Documents/Devel/quad_rotor/ap65111a.lib)(options "")(descr ""))
+  (lib (name ap65111a)(type Legacy)(uri ${KIPRJMOD}/ap65111a.lib)(options "")(descr ""))
   (lib (name sam-swd-10)(type Legacy)(uri ${KIPRJMOD}/sam-swd-10.lib)(options "")(descr ""))
   (lib (name ATSAMS70N19A)(type Legacy)(uri ${KIPRJMOD}/ATSAMS70N19A.lib)(options "")(descr ""))
 )
